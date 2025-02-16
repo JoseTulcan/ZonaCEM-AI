@@ -1,1 +1,1 @@
-Modelos entrenados para cada frecuencia listos para evaluar nuevos escenarios
+Modelos entrenados para cada frecuencia
