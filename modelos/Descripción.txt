@@ -1,1 +1,0 @@
-Modelos entrenados para cada frecuencia
