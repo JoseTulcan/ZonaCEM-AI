@@ -1,0 +1,8 @@
+gdown==5.2.0
+gitlab==1.0.2
+matplotlib==3.10.1
+numpy==2.2.3
+Pillow==11.1.0
+Requests==2.32.3
+streamlit==1.43.0
+tensorflow==2.18.0
