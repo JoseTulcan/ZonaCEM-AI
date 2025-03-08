@@ -16,7 +16,7 @@ import json
 from datetime import datetime
 from matplotlib.colors import Normalize
 
-def init_gitlab_connection():
+def init_gitlab_connection(): 
     """Inicializa la conexión con GitLab"""
     gl = gitlab.Gitlab('https://gitlab.com')
     return gl
@@ -355,43 +355,34 @@ def main():
     # Sidebar
     # Sidebar
     with st.sidebar:
-        st.header("OPCIONES")
+        st.header("SECCIONES")
         vista_seleccionada = st.radio(
             "Seleccione una opción:",
-            ["Manual de Usuario", "Datasets de Imágenes", "Modelos y Evaluación", "Evaluar nuevos escenarios"]
+            ["Manual de usuario", "Datasets de imágenes", "Modelos y evaluación", "Evaluar nuevos escenarios"]
         )
         
         st.markdown("---")
         st.markdown("""
-        ### Sobre las opciones 
+        ### Sobre las secciones 
         
         Lo que puede hacer en esta interfaz: 
-        1. **Manual de Usuario**: Guía de uso de la aplicación.
+        1. **Manual de usuario**: Guía de uso de la aplicación.
         2. **Datasets**: Muestra de los datasets de cada frecuencia.
-        3. **Modelos y Evaluación**: Evaluar cada modelo con cada dataset y ver las métricas de evaluación.
+        3. **Modelos y evaluación**: Evaluar cada modelo con cada dataset y ver las métricas de evaluación.
         4. **Evaluar nuevos escenarios**: Evaluar cada modelo con escenarios nuevos sin etiqueta.
         
-        ### Sobre el Modelo
-        
-        El modelo utiliza tres capas de entrada:
-        1. **Estructura**: Representación de paredes y obstáculos
-        2. **Píxeles Seleccionados**: Puntos de medición conocidos
-        3. **Posición de Antena**: Ubicación y altura de la antena
-        
-        Y predice:
-        - **Mapa de Potencia**: Distribución de potencia de señal en dBm
         """)
 
     # Nueva sección: Manual de Usuario
-    if vista_seleccionada == "Manual de Usuario":
-        st.header("Manual de Usuario")
+    if vista_seleccionada == "Manual de usuario":
+        st.header("Manual de usuario")
         st.markdown("""
         Bienvenido a **ZonaCEM AI**. Esta sección le servirá de guía para utilizar la aplicación.
 
-        **Pasos y Descripción:**
+        **Pasos y descripción:**
         
-        1. **Datasets de Imágenes:**  
-           Aquí podrá visualizar los conjuntos de datos que contienen imágenes asociadas a cada modelo. Seleccione el modelo y la carpeta de interés para ver las imágenes disponibles.
+        1. **Datasets de imágenes:**  
+           Aquí podrá visualizar una muestra de los conjuntos de imágenes de cada una de las capas usadas en el entrenamiento de los modelos. Seleccione el modelo y la carpeta de interés para ver las imágenes disponibles.
 
         2. **Modelos y Evaluación:**  
            En esta sección puede cargar un modelo preentrenado, evaluarlo utilizando el dataset correspondiente y ver las métricas de evaluación.  
@@ -410,7 +401,7 @@ def main():
         """)
     
     # Sección: Datasets de Imágenes
-    elif vista_seleccionada == "Datasets de Imágenes":
+    elif vista_seleccionada == "Datasets de imágenes":
         modelo_seleccionado = st.selectbox(
             "Selecciona un modelo", list(DATASET_URLS.keys())
         )
@@ -459,7 +450,7 @@ def main():
             st.error(f"Error al acceder al repositorio: {str(e)}")
 
     # Modelos y Evaluación view
-    elif vista_seleccionada == "Modelos y Evaluación":
+    elif vista_seleccionada == "Modelos y evaluación":
         modelo_seleccionado = st.selectbox(
             "Selecciona un modelo", list(MODELOS.keys())
         )
