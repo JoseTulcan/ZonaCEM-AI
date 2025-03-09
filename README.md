@@ -34,9 +34,9 @@ Modelos entrenados disponibles en: https://gitlab.com/tulcanjose1/zonacem-ai/-/t
 
 
 ## Autores
-**José Luis Mera Tulcán
+**José Luis Mera Tulcán**
 
-**Giovanni Javier Pantoja Mora
+**Giovanni Javier Pantoja Mora**
 
 
 
