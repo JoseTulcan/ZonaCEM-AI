@@ -320,24 +320,24 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
 def main():
     st.set_page_config(page_title="ZonaCEM AI", page_icon="📡", layout="wide")
     st.title("ZonaCEM AI")
-    st.markdown("Esta aplicación utiliza modelos de IA para predecir la potencia recibida en entornos de estaciones base celulares.")
+    #st.markdown("Esta aplicación utiliza modelos de IA para predecir la potencia recibida en entornos de estaciones base celulares.")
 
     # Constants
     DATASET_URLS = {
         "Modelo 1.95GHz": {
             "base": "datasets/dataset_1.95_30muestras_exclusion",
             "folders": ["structures", "selected_pixels", "antenna_position", "combined_power"],
-            "folder_names": ["Estructuras", "Puntos de Medición", "Posición de Antena", "Mapa de Potencia"]
+            "folder_names": ["Estructuras", "Puntos de medición", "Posición de antena", "Mapa de potencia"]
         },
         "Modelo 2.13GHz": {
             "base": "datasets/dataset_2.13_30muestras_exclusión",
             "folders": ["structures", "selected_pixels", "antenna_position", "combined_power"],
-            "folder_names": ["Estructuras", "Puntos de Medición", "Posición de Antena", "Mapa de Potencia"]
+            "folder_names": ["Estructuras", "Puntos de medición", "Posición de antena", "Mapa de potencia"]
         },
         "Modelo 2.65GHz": {
             "base": "datasets/dataset_2.65_30muestras_exclusion",
             "folders": ["structures", "selected_pixels", "antenna_position", "combined_power"],
-            "folder_names": ["Estructuras", "Puntos de Medición", "Posición de Antena", "Mapa de Potencia"]
+            "folder_names": ["Estructuras", "Puntos de medición", "Posición de antena", "Mapa de potencia"]
         }
     }
     
@@ -367,8 +367,8 @@ def main():
         
         Lo que puede hacer en esta interfaz: 
         1. **Manual de usuario**: Guía de uso de la aplicación.
-        2. **Datasets**: Muestra de los datasets de cada frecuencia.
-        3. **Modelos y evaluación**: Evaluar cada modelo con cada dataset y ver las métricas de evaluación.
+        2. **Datasets de imágenes**: Muestra de los datasets de cada frecuencia.
+        3. **Modelos y evaluación**: Evaluar cada modelo con cada dataset.
         4. **Evaluar nuevos escenarios**: Evaluar cada modelo con escenarios nuevos sin etiqueta.
         
         """)
@@ -379,29 +379,76 @@ def main():
         st.markdown("""
         Bienvenido a **ZonaCEM AI**. Esta sección le servirá de guía para utilizar la aplicación.
 
-        **Pasos y descripción:**
+        La predicción mapas de potencia recibida en estaciones base celulares es una tarea importante en la planificación de redes móviles, incluyendo su posterior vigilancia y control.
+        
+        En esta aplicación, se utilizan modelos de inteligencia artificial para predecir la distribución de potencia de estaciones base celulares que funcionan en diferentes frecuencias.
+        Se generaron tres datasets de imágenes que simulan estaciones base celulares para las frecuencias de 1.95GHz, 2.13GHz y 2.65GHz, cada uno con las siguientes capas: 
+        
+        - **Estructuras**: Representación de edificaciones y obstáculos(paredes). 
+        - **Puntos de medición**: Ubicación de las mediciones dispersas de potencia realizadas.
+        - **Posición de antena**: Ubicación de la antena de la estación base.  
+        - **Mapa de potencia**: Distribución de potencia recibida.
+        
+        Las tres primeras capas corresponden a las entradas de los modelos, por lo que esta aplicación predice la potencia recibida a partir de las estructuras, medidas dispersas y posición de la antena.
+        
+        La altura de las estructuras y la antena se mide en metros mientras que la potencia recibida se mide en dBm al igual que las mediciones dispersas.
+        Estas magnitudes se representan con diferentes intensidades de color en las imágenes en escala de grises, siendo el color blanco el valor más alto.
+
+        
+        
+        **Descripción de las secciones:**
         
         1. **Datasets de imágenes:**  
-           Aquí podrá visualizar una muestra de los conjuntos de imágenes de cada una de las capas usadas en el entrenamiento de los modelos. Seleccione el modelo y la carpeta de interés para ver las imágenes disponibles.
+           Aquí podrá visualizar una muestra de los conjuntos de imágenes (datasets) usadas en el entrenamiento de los modelos. 
+           Se dispone de los tres datasets descritos anteriormente.           
+           
+           Seleccione el modelo de acuerdo a la frecuencia y luego la capa de interés para ver las imágenes disponibles.
 
         2. **Modelos y Evaluación:**  
-           En esta sección puede cargar un modelo preentrenado, evaluarlo utilizando el dataset correspondiente y ver las métricas de evaluación.  
-           - **Cargar Modelo:** Permite cargar el modelo en memoria.
-           - **Descargar Modelo:** Opción para descargar el modelo.
-           - **Evaluar Modelo:** Ejecute la evaluación con los datos del dataset seleccionado.
+           En esta sección puede cargar cada uno de los modelos entrenados, evaluarlo utilizando el dataset correspondiente y ver las métricas de evaluación.  
+           
+           Se elige un modelo y se presiona el botón **Cargar Modelo** para cargarlo en memoria. Luego, se presiona **Evaluar Modelo** evaluar el modelo con el dataset correspondiente al modelo cargado.
+           Se muestra la predicción del modelo y las métricas de evaluación.
+           
+           Una vez cargado uno de los modelos entrenados de cierta frecuencia, también se puede evaluar con los otros datasets de frecuencias diferentes.
+           Para lograrlo se debe cargar un modelo, luego seleccionar otro modelo(correspondiente al dataset a evaluar) desde la misma caja de opciones y presionar **Evaluar Modelo**. 
         
         3. **Evaluar nuevos escenarios:**  
-           Esta opción permite aplicar los modelos en escenarios nuevos sin etiquetas para predecir la distribución de potencia.
+           Esta opción permite aplicar los modelos entrenados en las tres frecuencias en escenarios nuevos sin etiquetas para predecir la distribución de potencia.
+           
+           En esta seccción hay cuatro subsecciones, tres de ellas correspondientes a cada una de las capas de entrada a los modelo, en las que se podrá cargar las imágenes del nuevo escenario siguiendo el formato de las mostradas en la sección **Dataset de imágenes**. 
 
+           En caso de no disponer de las imágenes, en cada subsección se puede construir las imágenes necesarias para la predicción.
+        
+           **Pasos para la construcción de nuevas imágenes:** 
+           
+           - **Estructuras:** El usuario puede construir líneas y rectángulos para representar las estructuras y obstáculos, indicando la ubicación y altura. Una vez definidos los
+           parámetros se selecciona la opción **Añadir estructura**, lo que hará visible la estructura en la imagen para poder continuar con la sigueinte estructura. Si ingresó un dato 
+           que no es correcto, puede presionar el boton **Deshacer** para borrar la última estructura añadida, o en su defecto **Borrar Todo**, si lo que desea es empezar de cero. 
+           Al terminar de definir todas las estructuras se selecciona **Guardar** para guardar la imagen. 
+           
+           - **Posición de antena:** El usuario puede seleccionar la ubicación y altura de la antena, y seleccionar **Colocar Punto** para mostrar la antena en la imagen.
+           Puede borrar la antena seleccionada presionando **Borrar**, o simplemente definir una posición y seleccionar nuevamente **Colocar Punto**. Finalmente debe seleccionar **Guardar punto** para guardar la imagen.            
+           
+           - **Puntos de medición:** Es posible definir la ubicación de las mediciones y el valor de la potencia recibida en dBm en dicha posición. Se debe seleccionar **Añadir Medición** para agregar la medición en la imagen y continuar con la siguiente
+           hasta completar todas las mediciones. Si se ingresó un dato incorrecto, se puede borrar la última medición añadida presionando **Deshacer**, o en su defecto **Borrar Todo** para empezar de cero. Al finalizar se selecciona **Guardar** para guardar la imagen.
+           
+           Todas las variables tienen un rango de valores específico, los que se deben seguir para obtener una predicción adecuada. 
+           
+           Las imagenes guardadas se mostrarán en la barra lateral, donde se podrá descargar o borrar las imágenes guardadas. Con las imágenes descargadas se podrá evaluar el modelo seleccionando **Evaluar Escenarios**.
+           
+           Para la evaluación deberá seleccionar el modelo y presionar **Ejecutar evaluación**. Se mostrará la predicción del modelo.
+            
         **Recomendaciones:**
         
         - Antes de evaluar un modelo, asegúrese de cargarlo.
         - Si decide evaluar un modelo con un dataset diferente, tome en cuenta que los resultados podrían no ser óptimos.
-        - Consulte la documentación adjunta o contacte al soporte para más detalles.
+        
         """)
     
     # Sección: Datasets de Imágenes
     elif vista_seleccionada == "Datasets de imágenes":
+        st.header("Datasets de imágenes")
         modelo_seleccionado = st.selectbox(
             "Selecciona un modelo", list(DATASET_URLS.keys())
         )
@@ -412,7 +459,7 @@ def main():
         
         # Mostrar los nombres en español en el selectbox
         carpeta_nombre = st.selectbox(
-            "Selecciona una carpeta", DATASET_URLS[modelo_seleccionado]["folder_names"]
+            "Selecciona una carpeta(capa)", DATASET_URLS[modelo_seleccionado]["folder_names"]
         )
         
         # Obtener el nombre original de la carpeta para usar en la ruta
@@ -451,6 +498,7 @@ def main():
 
     # Modelos y Evaluación view
     elif vista_seleccionada == "Modelos y evaluación":
+        st.header("Modelos y evaluación")
         modelo_seleccionado = st.selectbox(
             "Selecciona un modelo", list(MODELOS.keys())
         )
@@ -462,7 +510,7 @@ def main():
             st.warning("⚠️ No hay ningún modelo cargado actualmente. Por favor, carga un modelo antes de evaluarlo.")
         
         # Model button (solo queda un botón, así que no necesitamos columnas)
-        if st.button("Cargar Modelo"):
+        if st.button("Cargar modelo"):
             # Clear previous model if exists
             if st.session_state['modelo_actual']:
                 st.session_state['modelo_actual'] = None
@@ -480,12 +528,12 @@ def main():
         # Evaluation section
         eval_col1, eval_col2 = st.columns([3, 1])
         with eval_col1:
-            st.subheader("Evaluación del Modelo")
+            st.subheader("Evaluación del modelo")
             st.write("Presiona el botón para evaluar el modelo con los datos seleccionados.")
         
         with eval_col2:
             is_model_loaded = st.session_state['modelo_actual'] is not None
-            evaluar_clicked = st.button("Evaluar Modelo", disabled=not is_model_loaded)
+            evaluar_clicked = st.button("Evaluar modelo", disabled=not is_model_loaded)
         
         # Run evaluation
         if evaluar_clicked and is_model_loaded:
@@ -498,6 +546,7 @@ def main():
             evaluate_model(st.session_state['modelo_actual'], dataset_path)
 
     else:
+            st.header("Evaluación de nuevos escenarios")
             def calculate_intensity(value, min_val, max_val):
                 """Calcula la intensidad del color basado en el valor"""
                 return int(((value - min_val) / (max_val - min_val)) * 255)
@@ -575,7 +624,7 @@ def main():
                 if not os.path.exists("resultados"):
                     return
                     
-                st.sidebar.header("Imágenes Guardadas")
+                st.sidebar.header("Imágenes guardadas")
                 image_files = [f for f in os.listdir("resultados") if f.endswith(".png")]
                 image_files.sort(key=lambda x: os.path.getmtime(os.path.join("resultados", x)), reverse=True)
                 
@@ -631,7 +680,7 @@ def main():
                 # Configurar vmin, vmax y etiqueta según tipo de datos
                 config = {
                     "estructuras": (3, 20, "Altura (m)"),
-                    "posicion_antena": (10, 40, "Altura (m)"),
+                    "trasmisor": (10, 40, "Altura (m)"),
                     "mediciones": (-100, 40, "Señal (dBm)")
                 }
                 
@@ -728,7 +777,7 @@ def main():
                 
                 altura = st.slider("Altura (metros)", 3, 20, 10)
                 
-                if st.button("Añadir Estructura", key="add_structure"):
+                if st.button("Añadir estructura", key="add_structure"):
                     new_structure = {
                         'tipo': st.session_state.drawing_tool,
                         'coords': [(start_x, start_y), (end_x, end_y)],
@@ -740,7 +789,7 @@ def main():
                 # Botones de acción
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button("Borrar Todo", key="clear_structures"):
+                    if st.button("Borrar todo", key="clear_structures"):
                         st.session_state.structures = []
                         st.rerun()
                 with col2:
@@ -788,7 +837,7 @@ def main():
                 
                 altura = st.slider("Altura (metros)", 10, 40, 25)
                 
-                if st.button("Colocar Punto", key="add_point"):
+                if st.button("Colocar punto", key="add_point"):
                     st.session_state.reference_point = (point_x, point_y, altura)
                     st.rerun()
                 
@@ -799,7 +848,7 @@ def main():
                         st.session_state.reference_point = None
                         st.rerun()
                 with col2:
-                    if st.button("Guardar Punto", key="save_point"):
+                    if st.button("Guardar punto", key="save_point"):
                         save_image_and_data(img, "trasmisor", st.session_state.reference_point)
 
             def create_pixel_selector():
@@ -840,14 +889,14 @@ def main():
                 with col3:
                     dbm = st.number_input("Valor (dBm)", -100, 40, -50)
                 
-                if st.button("Añadir Medición", key="add_measurement"):
+                if st.button("Añadir medición", key="add_measurement"):
                     st.session_state.measurement_points.append((x, y, dbm))
                     st.rerun()
                 
                 # Botones de acción
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button("Borrar Todo", key="clear_measurements"):
+                    if st.button("Borrar todo", key="clear_measurements"):
                         st.session_state.measurement_points = []
                         st.rerun()
                 with col2:
@@ -856,7 +905,7 @@ def main():
                             st.session_state.measurement_points.pop()
                             st.rerun()
                 with col3:
-                    if st.button("Guardar Mediciones", key="save_measurements"):
+                    if st.button("Guardar mediciones", key="save_measurements"):
                         save_image_and_data(img, "mediciones", st.session_state.measurement_points)
 
             def add_model_evaluation_section():
@@ -880,79 +929,6 @@ def main():
                 # Verificar si las imágenes necesarias están cargadas
                 required_images = ['estructuras', 'trasmisor', 'mediciones']
                 images_loaded = all(hasattr(st.session_state, f'uploaded_{img}') for img in required_images)
-                
-                # Funciones auxiliares para la segmentación
-                def create_segmentation_mask(power_map, antenna_pos):
-                    """
-                    Crea una máscara de segmentación basada en niveles de potencia
-                    Retorna la máscara y los radios calculados para las zonas
-                    """
-                    height, width = power_map.shape
-                    mask = np.zeros((height, width, 3))  # RGB mask
-                    
-                    # Crear matrices de coordenadas
-                    y, x = np.ogrid[:height, :width]
-                    
-                    # Encontrar puntos máximos para cada zona
-                    high_power_mask = power_map > 10
-                    mid_power_mask = (power_map <= 10) & (power_map > 0)
-                    
-                    # Encontrar el radio para la zona roja (>10 dBm)
-                    if np.any(high_power_mask):
-                        high_power_points = np.where(high_power_mask)
-                        distances = np.sqrt((high_power_points[0] - antenna_pos[0])**2 + 
-                                        (high_power_points[1] - antenna_pos[1])**2)
-                        red_radius = np.max(distances)
-                    else:
-                        red_radius = 0
-                        
-                    # Encontrar el radio para la zona amarilla (0-10 dBm)
-                    if np.any(mid_power_mask):
-                        mid_power_points = np.where(mid_power_mask)
-                        distances = np.sqrt((mid_power_points[0] - antenna_pos[0])**2 + 
-                                        (mid_power_points[1] - antenna_pos[1])**2)
-                        yellow_radius = np.max(distances)
-                    else:
-                        yellow_radius = red_radius
-                    
-                    # Crear las zonas
-                    distances = np.sqrt((y - antenna_pos[0])**2 + (x - antenna_pos[1])**2)
-                    
-                    # Zona roja (>10 dBm)
-                    red_zone = distances <= red_radius
-                    mask[red_zone] = [1, 0, 0]  # Rojo
-                    
-                    # Zona amarilla (0-10 dBm)
-                    yellow_zone = (distances > red_radius) & (distances <= yellow_radius)
-                    mask[yellow_zone] = [1, 1, 0]  # Amarillo
-                    
-                    # Zona verde (<0 dBm)
-                    green_zone = distances > yellow_radius
-                    mask[green_zone] = [0, 1, 0]  # Verde
-                    
-                    return mask, red_radius, yellow_radius
-                
-                def find_antenna_position(ant_img):
-                    """
-                    Detecta la posición de la antena en la imagen de antenas.
-                    
-                    Args:
-                        ant_img: array numpy con la imagen de la antena
-                    
-                    Returns:
-                        tuple: (y, x) coordenadas de la posición de la antena
-                    """
-                    # Encontrar el valor máximo en la imagen de la antena
-                    max_value = np.max(ant_img)
-                    
-                    # Encontrar las coordenadas del pixel que marca la posición de la antena
-                    antenna_pos = np.where(ant_img == max_value)
-                    
-                    if len(antenna_pos[0]) == 0:
-                        raise ValueError("No se encontró la posición de la antena")
-                    
-                    # Tomar la primera posición encontrada
-                    return antenna_pos[0][0], antenna_pos[1][0]
                 
                 # Botón para ejecutar evaluación
                 if st.button("Ejecutar evaluación", disabled=not images_loaded, key="execute_evaluation_button"):
@@ -1003,7 +979,7 @@ def main():
                                     st.metric("Potencia mínima", f"{np.min(pred_np):.2f} dBm")
                                 
                                 # Visualización de las capas de entrada
-                                st.write("### Capas de Entrada")
+                                st.write("### Capas de entrada")
                                 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
                                 
                                 # Desnormalizar cada capa para visualización
@@ -1041,7 +1017,7 @@ def main():
                                 im = ax.imshow(pred_np, extent=[0, 50, 0, 50], cmap='viridis',
                                             vmin=POWER_MIN, vmax=adjusted_vmax)
 
-                                ax.set_title('Mapa de Potencia Predicho', pad=20)
+                                ax.set_title('Mapa de potencia predicho', pad=20)
                                 plt.colorbar(im, ax=ax)
                                 ax.grid(True, linestyle='--', alpha=0.3)
                                 ax.set_xlabel('Distancia (m)')
@@ -1074,178 +1050,6 @@ def main():
                                     st.info("No hay suficientes datos válidos para generar un histograma")
                                 plt.close(fig)
                                 
-                                # ------------ SECCIÓN MEJORADA: SEGMENTACIÓN DE EXPOSICIÓN A CEM --------------
-                                st.subheader("Segmentación de exposición a CEM")
-
-                                try:
-                                    # Obtener la posición de la antena
-                                    antenna_pos = find_antenna_position(ant_img)
-                                    
-                                    # Crear máscara de segmentación
-                                    seg_mask, red_radius, yellow_radius = create_segmentation_mask(pred_np, antenna_pos)
-                                    
-                                    # Convertir las coordenadas para visualización
-                                    height, width = pred_np.shape
-                                    antenna_plot_pos = (antenna_pos[1] * 50/width, antenna_pos[0] * 50/height)
-                                    
-                                    # Radio en metros
-                                    red_radius_meters = red_radius * 50/width
-                                    yellow_radius_meters = yellow_radius * 50/width
-                                    
-                                    # Crear figura para la segmentación
-                                    fig, ax = plt.subplots(figsize=(8, 7))
-                                    ax.imshow(seg_mask, extent=[0, 50, 0, 50])
-                                    
-                                    # Marcar la posición de la antena
-                                    ax.plot(antenna_plot_pos[0], antenna_plot_pos[1], 'b+', markersize=10, label='Antena')
-                                    
-                                    # Dibujar círculos para los radios
-                                    red_circle = plt.Circle(antenna_plot_pos, red_radius_meters, 
-                                                        fill=False, color='white', linestyle='-')
-                                    yellow_circle = plt.Circle(antenna_plot_pos, yellow_radius_meters, 
-                                                            fill=False, color='white', linestyle='-')
-                                    ax.add_artist(red_circle)
-                                    ax.add_artist(yellow_circle)
-                                    
-                                    # Configurar aspecto de la gráfica
-                                    ax.set_title('Segmentación de exposición a CEM', pad=20)
-                                    ax.grid(True, linestyle='--', alpha=0.3)
-                                    ax.set_xlabel('Distancia (m)')
-                                    ax.set_ylabel('Distancia (m)')
-                                    
-                                    # Añadir leyenda de colores mejorada
-                                    from matplotlib.patches import Patch
-                                    legend_elements = [
-                                        Patch(facecolor='red', label='Zona de rebasamiento (>10 dBm)'),
-                                        Patch(facecolor='yellow', label='Zona ocupacional (0-10 dBm)'),
-                                        Patch(facecolor='green', label='Zona poblacional / conformidad (<0 dBm)')
-                                    ]
-                                    ax.legend(handles=legend_elements, loc='upper right')
-                                    
-                                    plt.tight_layout()
-                                    st.pyplot(fig)
-                                    
-                                    # Mostrar información de los radios y métricas adicionales de CEM
-                                    st.write("### Métricas de exposición a CEM")
-                                    
-                                    # Calcular áreas de exposición
-                                    area_rebasamiento = np.pi * red_radius_meters**2
-                                    area_ocupacional = np.pi * (yellow_radius_meters**2 - red_radius_meters**2)
-                                    
-                                    # Calcular porcentajes de la zona total
-                                    total_area = 50 * 50  # área total en m²
-                                    porcentaje_rebasamiento = (area_rebasamiento / total_area) * 100
-                                    porcentaje_ocupacional = (area_ocupacional / total_area) * 100
-                                    
-                                    # Métricas en columnas
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.metric("Radio zona de rebasamiento", f"{red_radius_meters:.2f} m")
-                                        st.metric("Área zona de rebasamiento", f"{area_rebasamiento:.2f} m²")
-                                        st.metric("% del área total (rebasamiento)", f"{porcentaje_rebasamiento:.2f}%")
-                                        
-                                    with col2:
-                                        st.metric("Radio zona ocupacional", f"{yellow_radius_meters:.2f} m")
-                                        st.metric("Área zona ocupacional", f"{area_ocupacional:.2f} m²")
-                                        st.metric("% del área total (ocupacional)", f"{porcentaje_ocupacional:.2f}%")
-                                    
-                                    # Recomendaciones de seguridad basadas en los resultados
-                                    st.write("### Recomendaciones de seguridad")
-                                    
-                                    if red_radius_meters > 5:
-                                        st.warning(f"""
-                                        ⚠️ **Alerta**: La zona de rebasamiento tiene un radio de {red_radius_meters:.2f} m, superior a 5 metros. 
-                                        Se recomienda establecer barreras físicas y señalización clara para evitar el acceso a esta área.
-                                        """)
-                                    else:
-                                        st.info(f"""
-                                        ℹ️ La zona de rebasamiento tiene un radio de {red_radius_meters:.2f} m, con un área controlable.
-                                        Se recomienda establecer señalización adecuada alrededor de la antena.
-                                        """)
-                                    
-                                    if yellow_radius_meters > 15:
-                                        st.warning(f"""
-                                        ⚠️ **Precaución**: La zona ocupacional se extiende hasta {yellow_radius_meters:.2f} m.
-                                        Personal técnico debe limitar su tiempo de exposición en esta área y usar equipo de protección adecuado.
-                                        """)
-                                    
-                                    # Análisis de conformidad normativa
-                                    cumple_normas = True
-                                    if porcentaje_rebasamiento > 5:
-                                        cumple_normas = False
-                                        st.error("❌ La zona de rebasamiento excede el 5% del área total, posible incumplimiento normativo.")
-                                    
-                                    if cumple_normas:
-                                        st.success("✅ Los niveles de exposición a CEM cumplen con los límites normativos recomendados.")
-                                    
-                                    # Guardar la figura para descargar
-                                    buffer_seg = io.BytesIO()
-                                    fig.savefig(buffer_seg, format='png', bbox_inches='tight', dpi=300)
-                                    buffer_seg.seek(0)
-                                    
-                                    # Generar nombre de archivo con timestamp para segmentación
-                                    timestamp_seg = datetime.now().strftime("%Y%m%d_%H%M%S")
-                                    filename_seg = f"segmentacion_exposicion_cem_{timestamp_seg}.png"
-                                    
-                                    # Botón de descarga para segmentación
-                                    st.download_button(
-                                        label="Descargar imagen de segmentación",
-                                        data=buffer_seg,
-                                        file_name=filename_seg,
-                                        mime="image/png",
-                                        key="download_segmentation_button"
-                                    )
-                                    
-                                    # Generar informe de exposición CEM como texto para descargar
-                                    informe_text = f"""
-                                    INFORME DE EXPOSICIÓN A CAMPOS ELECTROMAGNÉTICOS (CEM)
-                                    Fecha y hora: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-                                    
-                                    MÉTRICAS PRINCIPALES:
-                                    - Radio zona de rebasamiento: {red_radius_meters:.2f} m
-                                    - Radio zona ocupacional: {yellow_radius_meters:.2f} m
-                                    - Área zona de rebasamiento: {area_rebasamiento:.2f} m²
-                                    - Área zona ocupacional: {area_ocupacional:.2f} m²
-                                    - Porcentaje del área total (rebasamiento): {porcentaje_rebasamiento:.2f}%
-                                    - Porcentaje del área total (ocupacional): {porcentaje_ocupacional:.2f}%
-                                    
-                                    ANÁLISIS DE CONFORMIDAD:
-                                    - Zona de rebasamiento: {'EXCEDE LÍMITES RECOMENDADOS' if porcentaje_rebasamiento > 5 else 'DENTRO DE LÍMITES ACEPTABLES'}
-                                    - Zona ocupacional: {'AMPLIA' if yellow_radius_meters > 15 else 'ACEPTABLE'}
-                                    
-                                    RECOMENDACIONES:
-                                    1. {
-                                        "Establecer barreras físicas y señalización clara para evitar el acceso a la zona de rebasamiento." 
-                                        if red_radius_meters > 5 
-                                        else "Establecer señalización adecuada alrededor de la antena."
-                                    }
-                                    2. Personal técnico debe limitar su tiempo de exposición en la zona ocupacional.
-                                    3. Realizar mediciones periódicas para verificar que los niveles se mantienen estables.
-                                    4. Utilizar equipo de protección personal adecuado al trabajar en la zona ocupacional.
-                                    
-                                    NIVELES DE POTENCIA:
-                                    - Valor máximo: {np.max(pred_np):.2f} dBm
-                                    - Valor mínimo: {np.min(pred_np):.2f} dBm
-                                    
-                                    Este informe es generado automáticamente y debe ser validado por un ingeniero especializado en telecomunicaciones.
-                                    """
-                                    
-                                    # Botón para descargar el informe de texto
-                                    st.download_button(
-                                        label="Descargar informe de exposición CEM",
-                                        data=informe_text,
-                                        file_name=f"informe_exposicion_cem_{timestamp_seg}.txt",
-                                        mime="text/plain",
-                                        key="download_report_button"
-                                    )
-                                    
-                                    plt.close(fig)
-                                    
-                                except Exception as e:
-                                    st.error(f"Error al generar la segmentación: {str(e)}")
-                                    st.exception(e)
-                                # ----------------- FIN SECCIÓN MEJORADA ------------------
-                                
                                 # Preparar imagen para descargar
                                 # Convertir la figura del resultado a una imagen para descargar
                                 buffer = io.BytesIO()
@@ -1271,7 +1075,7 @@ def main():
                             st.exception(e)
 
             def main():
-                st.title("Editor de Imágenes para Análisis de Cobertura")
+                #st.title("Editor de Imágenes para Análisis de Cobertura")
                 tab1, tab2, tab3, tab4 = st.tabs(["Estructuras", "Posición estación base", "Mediciones", "Evaluación"])
                 with tab1:
                     create_building_interface()
