@@ -1,8 +1,8 @@
 gdown==5.2.0
 gitlab==1.0.2
-matplotlib==3.10.1
-numpy==2.2.3
-Pillow==11.1.0
-Requests==2.32.3
+matplotlib==3.7.1
+numpy==1.24.3
+Pillow==10.0.0
+requests==2.31.0
 streamlit==1.43.0
-tensorflow==2.18.0
+tensorflow==2.13.0
