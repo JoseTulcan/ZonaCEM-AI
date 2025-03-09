@@ -1062,7 +1062,7 @@ def main():
                                 
                                 # Botón de descarga
                                 st.download_button(
-                                    label="Descargar imagen",
+                                    label="Descargar imagen de predicción",
                                     data=buffer,
                                     file_name=filename,
                                     mime="image/png",
