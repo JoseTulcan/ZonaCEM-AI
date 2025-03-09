@@ -1,5 +1,5 @@
 gdown==5.2.0
-gitlab==1.0.2
+python-gitlab==4.5.0
 numpy==1.26.4
 matplotlib==3.10.1
 Pillow==11.1.0
