@@ -36,7 +36,7 @@ https://gitlab.com/tulcanjose0/zonacem-ai/-/tree/e95ebba44fefaf4bce6609ad0a3c70d
 
 ## Autores
 **José Luis Mera Tulcán**
-
+ 
 **Giovanni Javier Pantoja Mora**
 
 

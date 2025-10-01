@@ -2283,7 +2283,7 @@ def main():
                                     st.metric("Potencia máxima", f"{np.max(pred_np):.2f} dBm")
                                 with metrics_col2:
                                     st.metric("Potencia mínima", f"{np.min(pred_np):.2f} dBm")
-
+ 
                                 # Visualización de las capas de entrada
                                 st.write("### Capas de entrada")
                                 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
