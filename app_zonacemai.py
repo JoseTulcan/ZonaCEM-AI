@@ -2572,11 +2572,12 @@ def main():
         
         # Enlaces de acceso principales
         st.subheader("📂 Enlaces de Acceso")   
-        
-        # URLs actualizadas - Versión 4
+
+        # URLs actualizadas - Versión 5
         ZENODO_RECORD_URL = "https://doi.org/10.5281/zenodo.17110951"
-        ZENODO_PDF_URL = "https://zenodo.org/records/17247631/files/Art%C3%ADculo.pdf"
-        ZENODO_PDF_DOWNLOAD_URL = "https://zenodo.org/records/17247631/files/Art%C3%ADculo.pdf?download=1"
+        ZENODO_PDF_URL = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf"
+        ZENODO_PDF_PREVIEW_URL = "https://zenodo.org/records/17247692/preview/Art%C3%ADculo.pdf?include_deleted=0"
+        ZENODO_PDF_DOWNLOAD_URL = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf?download=1"
         GITLAB_REPO_URL = "https://gitlab.com/tulcanjose0/zonacem-ai"
 
         col1, col2, col3, col4 = st.columns(4)
@@ -2653,7 +2654,7 @@ def main():
         # Vista previa del PDF usando Google Docs Viewer
         st.subheader("📖 Vista Previa del Artículo")
         
-        pdf_url = "https://zenodo.org/records/17247631/files/Art%C3%ADculo.pdf"
+        pdf_url = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf"
         google_viewer_url = f"https://docs.google.com/gview?url={pdf_url}&embedded=true"
         
         st.markdown(f"""
