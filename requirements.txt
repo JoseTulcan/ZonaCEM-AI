@@ -1,10 +1,9 @@
 # Requirements for ZonaCEM AI application
 gdown==5.2.0
 python-gitlab==4.5.0
-numpy==1.26.4
 matplotlib==3.10.1
 Pillow==11.1.0
 requests==2.32.3
 streamlit==1.43.0
 tensorflow==2.20.0
-scipy==1.11.4
+scipy>=1.14.0
