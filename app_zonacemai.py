@@ -2571,7 +2571,7 @@ def main():
             """)
         
         # Enlaces de acceso principales
-        st.subheader("📂 Enlaces de Acceso") 
+        st.subheader("📂 Enlaces de Acceso")   
         
         # URLs actualizadas - Versión 4
         ZENODO_RECORD_URL = "https://doi.org/10.5281/zenodo.17110951"
@@ -2581,7 +2581,7 @@ def main():
 
         col1, col2, col3, col4 = st.columns(4)
         
-        with col1:
+        with col1: 
             st.markdown(f"""
             <a href="{ZENODO_RECORD_URL}" target="_blank"> 
                 <button style="
