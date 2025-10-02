@@ -3,6 +3,9 @@
 ## Conjuntos de datos y modelos entrenados disponibles en: 
 https://gitlab.com/tulcanjose0/zonacem-ai/-/tree/e95ebba44fefaf4bce6609ad0a3c70d4c37cac2f/
 
+## Artículo disponible en:
+https://doi.org/10.5281/zenodo.17110951
+
 ## Aplicación disponible en:
 [ZonaCEM AI](https://zonacem-ai-app.streamlit.app/)  
 
