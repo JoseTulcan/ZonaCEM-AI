@@ -2574,7 +2574,8 @@ def main():
         st.subheader("📂 Enlaces de Acceso") 
         
         # URLs
-        ZENODO_RECORD_URL = "https://zenodo.org/records/17216720"
+        #ZENODO_RECORD_URL = "https://zenodo.org/records/17216720" 
+        ZENODO_RECORD_URL = "https://doi.org/10.5281/zenodo.17110951"
         ZENODO_PDF_URL = "https://zenodo.org/records/17216720/files/Art%C3%ADculo.pdf"
         ZENODO_PDF_DOWNLOAD_URL = "https://zenodo.org/records/17216720/files/Art%C3%ADculo.pdf?download=1"
         GITLAB_REPO_URL = "https://gitlab.com/tulcanjose0/zonacem-ai"
