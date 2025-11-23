@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import io
@@ -23,10 +22,14 @@ import math
 from scipy import stats
 from PIL import Image
 
+# ===== IMPORTAR SISTEMA DE TRADUCCIONES =====
+from translations import get_text, TRANSLATIONS
+
 def init_gitlab_connection(): 
     """Inicializa la conexión con GitLab"""
     gl = gitlab.Gitlab('https://gitlab.com')
     return gl
+
 def get_project():
     """Obtiene el proyecto de GitLab"""
     gl = init_gitlab_connection()
@@ -588,15 +591,18 @@ def download_and_load_model_from_gitlab(url, model_name, language='es'):
 
 def show_model_info(model):  
     """Muestra información reducida sobre el modelo"""
-    st.subheader("Información del Modelo")
-    # Mostrar solo información básica
-    st.write("Forma de entrada:", model.input_shape)
-    st.write("Forma de salida:", model.output_shape)
-    #st.write(f"Número total de parámetros: {model.count_params():,}")
+    # Acceder a la función t desde session_state o pasarla como parámetro
+    st.subheader("Model Information" if st.session_state.get('language', 'en') == 'en' else "Información del Modelo")
+    st.write("Input shape:" if st.session_state.get('language', 'en') == 'en' else "Forma de entrada:", model.input_shape)
+    st.write("Output shape:" if st.session_state.get('language', 'en') == 'en' else "Forma de salida:", model.output_shape)
 
-def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True, selected_indices=None):
+def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True, selected_indices=None, language='en'):
+    # AGREGAR: Función helper para traducciones
+    def t(key, **kwargs):
+        return get_text(key, language, **kwargs)
+    
     try:
-        # Constantes para normalización/desnormalización
+        # Constantes para normalización/desnormalización (sin cambios)
         STRUCT_MIN, STRUCT_MAX = 0, 20    # metros
         ANTENNA_MIN, ANTENNA_MAX = 0, 40  # metros
         POWER_MIN = -100   # dBm (Piso de ruido térmico)
@@ -605,32 +611,39 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
         
         # Establecer el número total estimado de imágenes (sabemos que hay aproximadamente 10,000)
         total_images = 10000
-        st.info(f"Tamaño del dataset: {total_images} imágenes")
+        # CAMBIO: Traducir mensaje
+        st.info(t('dataset_size', size=total_images))
         
         # Seleccionar índices de imágenes a procesar
         if random_selection:
             if num_predictions > total_images:
                 num_predictions = total_images
-                st.warning(f"Solo hay {total_images} imágenes disponibles")
+                # CAMBIO: Traducir warning
+                st.warning(t('only_images_available', total=total_images))
             # Selección aleatoria de índices
             import random
             indices = random.sample(range(total_images), num_predictions)
             indices.sort()  # Ordenar para mejor seguimiento
-            st.write(f"Evaluando escenarios con índices aleatorios: {indices}")
+            # CAMBIO: Traducir mensaje
+            st.write(f"{t('evaluating_random_scenarios')}: {indices}")
         else:
             # Usar índices proporcionados
             if selected_indices is None or len(selected_indices) == 0:
-                st.error("No se proporcionaron índices para evaluación")
+                # CAMBIO: Traducir error
+                st.error(t('no_indices_provided'))
                 return
             # Validar que los índices estén dentro del rango
             valid_indices = [idx for idx in selected_indices if 0 <= idx < total_images]
             if len(valid_indices) != len(selected_indices):
-                st.warning(f"Algunos índices están fuera del rango válido (0-{total_images-1})")
+                # CAMBIO: Traducir warning
+                st.warning(t('indices_out_of_range', max=total_images-1))
             indices = valid_indices
             if not indices:
-                st.error("No hay índices válidos para evaluar")
+                # CAMBIO: Traducir error
+                st.error(t('no_valid_indices'))
                 return
-            st.write(f"Evaluando imágenes con índices: {indices}")
+            # CAMBIO: Traducir mensaje
+            st.write(f"{t('evaluating_images_indices')}: {indices}")
         
         # Obtener las imágenes y procesarlas directamente por índice
         project = get_project()
@@ -638,10 +651,9 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
         # Procesar las imágenes seleccionadas
         for i, idx in enumerate(indices):
             try:
-                with st.spinner(f"Cargando escenario #{idx+1}..."):
+                # CAMBIO: Traducir spinner
+                with st.spinner(t('loading_scenario', num=idx+1)):
                     # Construir nombres de archivo basados en el índice
-                    # Asumiendo que los archivos siguen un patrón como "image_XXXX.png" donde XXXX es el índice con ceros a la izquierda
-                    #file_format = f"image_{idx:03d}.png"  # Ajustar según el formato real de tus archivos
                     file_format = f"image_{idx+1:03d}.PNG" 
 
                     # Construir rutas completas
@@ -671,13 +683,16 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
                 # Desnormalizar predicción y valores reales
                 prediction_denorm = prediction_norm * (POWER_MAX - POWER_MIN) + POWER_MIN
                 power_denorm = power_norm * (POWER_MAX - POWER_MIN) + POWER_MIN
-                # Mostrar índice real de la imagen y número de predicción
-                st.write(f"### Predicción {i+1} (Escenario #{idx} del dataset)")
+                
+                # CAMBIO: Traducir título
+                st.write(f"### {t('prediction')} {i+1} ({t('scenario')} #{idx} {t('from_dataset')})")
+                
                 # Extraer nombre del archivo para mostrar información adicional
-                #filename = os.path.basename(structures[idx])
                 filename = os.path.basename(struct_path)
                 
-                st.write(f"Archivo: {filename}")
+                # CAMBIO: Traducir label
+                st.write(f"{t('file')}: {filename}")
+                
                 # Convertir tensores a arrays de NumPy
                 power_np = power_denorm.numpy() if hasattr(power_denorm, 'numpy') else np.array(power_denorm)
                 pred_np = prediction_denorm.numpy() if hasattr(prediction_denorm, 'numpy') else np.array(prediction_denorm)
@@ -716,7 +731,8 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
                     mae = 0.0
                     rmse = 0.0
                     r2 = 0.0
-                # Mostrar métricas
+                
+                # Mostrar métricas (sin cambios)
                 metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
                 with metrics_col1:
                     st.metric("MAE (dB)", f"{mae:.2f}")
@@ -724,93 +740,117 @@ def evaluate_model(model, dataset_path, num_predictions=5, random_selection=True
                     st.metric("RMSE (dB)", f"{rmse:.2f}")
                 with metrics_col3:
                     st.metric("R²", f"{r2:.4f}")
-                # Visualización de las capas de entrada
-                st.write("### Capas de Entrada")
+                
+                # CAMBIO: Traducir título
+                st.write(f"### {t('input_layers')}")
                 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+                
                 # Desnormalizar cada capa
                 layer1 = struct_norm * STRUCT_MAX
                 layer2 = pixel_norm * (POWER_MAX - POWER_MIN) + POWER_MIN
                 layer3 = ant_norm * ANTENNA_MAX
-                # Configurar visualizaciones
+                
+                # CAMBIO: Traducir títulos de los gráficos
                 im1 = ax1.imshow(layer1, extent=[0, 50, 0, 50], cmap='viridis')
-                ax1.set_title('Estructura (m)', pad=20)
+                ax1.set_title(f"{t('structure_m')}", pad=20)
                 plt.colorbar(im1, ax=ax1)
+                
                 im2 = ax2.imshow(layer2, extent=[0, 50, 0, 50], cmap='viridis')
-                ax2.set_title('Píxeles (dBm)', pad=20)
+                ax2.set_title(f"{t('pixels_dbm')}", pad=20)
                 plt.colorbar(im2, ax=ax2)
+                
                 im3 = ax3.imshow(layer3, extent=[0, 50, 0, 50], cmap='viridis')
-                ax3.set_title('Antena (m)', pad=20)
+                ax3.set_title(f"{t('antenna_m')}", pad=20)
                 plt.colorbar(im3, ax=ax3)
+                
+                # CAMBIO: Traducir labels de ejes
                 for ax in [ax1, ax2, ax3]:
                     ax.grid(True, linestyle='--', alpha=0.3)
-                    ax.set_xlabel('Distancia (m)')
-                    ax.set_ylabel('Distancia (m)')
+                    ax.set_xlabel(t('distance_m'))
+                    ax.set_ylabel(t('distance_m'))
+                
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
-                # Visualización de resultados
-                st.write("### Resultados")
+                
+                # CAMBIO: Traducir título
+                st.write(f"### {t('results')}")
                 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
+                
+                # CAMBIO: Traducir títulos
                 im1 = ax1.imshow(power_np, extent=[0, 50, 0, 50], cmap='viridis')
-                ax1.set_title('Power Real (dBm)', pad=20)
+                ax1.set_title(f"{t('real_power_dbm')}", pad=20)
                 plt.colorbar(im1, ax=ax1)
+                
                 im2 = ax2.imshow(pred_np, extent=[0, 50, 0, 50], cmap='viridis')
-                ax2.set_title('Predicción (dBm)', pad=20)
+                ax2.set_title(f"{t('prediction_dbm')}", pad=20)
                 plt.colorbar(im2, ax=ax2)
+                
+                # CAMBIO: Traducir labels
                 for ax in [ax1, ax2]:
                     ax.grid(True, linestyle='--', alpha=0.3)
-                    ax.set_xlabel('Distancia (m)')
-                    ax.set_ylabel('Distancia (m)')
+                    ax.set_xlabel(t('distance_m'))
+                    ax.set_ylabel(t('distance_m'))
+                
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
+                
                 # Calcular y visualizar diferencias 
                 fig, ax = plt.subplots(figsize=(8, 7))
                 difference = pred_np - power_np
                 im = ax.imshow(difference, extent=[0, 50, 0, 50], cmap='RdBu_r', 
-                            vmin=-10, vmax=10)  # Ajusta vmin/vmax según el rango esperado
-                ax.set_title('Diferencia (Predicción - Real) (dB)', pad=20)
+                            vmin=-10, vmax=10)
+                # CAMBIO: Traducir título
+                ax.set_title(f"{t('difference_prediction_real')}", pad=20)
                 plt.colorbar(im, ax=ax)
                 ax.grid(True, linestyle='--', alpha=0.3)
-                ax.set_xlabel('Distancia (m)')
-                ax.set_ylabel('Distancia (m)')
+                ax.set_xlabel(t('distance_m'))
+                ax.set_ylabel(t('distance_m'))
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
+                
                 # Histogramas si hay suficientes datos válidos
                 if valid_pixels > 10:
                     fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.hist(power_masked, bins=50, alpha=0.5, label='Real')
-                    ax.hist(prediction_masked, bins=50, alpha=0.5, label='Predicción')
-                    ax.set_xlabel('Potencia (dBm)')
-                    ax.set_ylabel('Frecuencia')
-                    ax.set_title('Distribución de valores reales vs predichos')
+                    # CAMBIO: Traducir labels de leyenda
+                    ax.hist(power_masked, bins=50, alpha=0.5, label=t('real'))
+                    ax.hist(prediction_masked, bins=50, alpha=0.5, label=t('prediction'))
+                    ax.set_xlabel(t('power_dbm'))
+                    ax.set_ylabel(t('frequency'))
+                    ax.set_title(t('distribution_real_vs_predicted'))
                     ax.legend()
                     plt.tight_layout()
                     st.pyplot(fig)
                     plt.close()
+                    
                     # Diagrama de dispersión (valores reales vs predichos)
                     fig, ax = plt.subplots(figsize=(8, 8))
                     ax.scatter(power_masked, prediction_masked, alpha=0.3)
                     min_val = min(np.min(power_masked), np.min(prediction_masked))
                     max_val = max(np.max(power_masked), np.max(prediction_masked))
-                    ax.plot([min_val, max_val], [min_val, max_val], 'r--')  # Línea diagonal de referencia
-                    ax.set_xlabel('Valores reales (dBm)')
-                    ax.set_ylabel('Valores predichos (dBm)')
-                    ax.set_title('Valores reales vs predichos')
+                    ax.plot([min_val, max_val], [min_val, max_val], 'r--')
+                    # CAMBIO: Traducir labels
+                    ax.set_xlabel(t('real_values_dbm'))
+                    ax.set_ylabel(t('predicted_values_dbm'))
+                    ax.set_title(t('real_vs_predicted_values'))
                     ax.grid(True)
                     plt.tight_layout()
                     st.pyplot(fig)
                     plt.close()
+                
                 st.markdown("---")  # Separador entre predicciones
 
             except Exception as e:
-                st.error(f"Error al procesar el escenario #{idx+1}: {str(e)}")
-                st.warning("Intentando con el siguiente escenario...")
+                # CAMBIO: Traducir mensajes de error
+                st.error(t('error_processing_scenario', num=idx+1, error=str(e)))
+                st.warning(t('trying_next_scenario'))
                 continue
                 
     except Exception as e:
-        st.error(f"Error durante la evaluación: {str(e)}")
+        # CAMBIO: Traducir mensajes de error
+        st.error(f"{t('evaluation_error')}: {str(e)}")
         st.error(f"Stacktrace: {str(traceback.format_exc())}")
 
 def get_all_files_from_folder(proyecto, ruta_carpeta, max_retries=3):
@@ -966,10 +1006,20 @@ def download_from_gitlab(url, filename):
         return None
 
 def main():
-    st.set_page_config(page_title="ZonaCEM AI", page_icon="📡", layout="wide")
-    st.title("ZonaCEM AI")
+    # ===== INICIALIZAR IDIOMA =====
+    if 'language' not in st.session_state:
+        st.session_state.language = 'en'  # INGLÉS POR DEFECTO
+    
+    # Función helper para obtener texto
+    def t(key, **kwargs):
+        return get_text(key, st.session_state.language, **kwargs)
+    
+    # ===== CONFIGURACIÓN DE PÁGINA =====
+    st.set_page_config(page_title=t("page_title"), page_icon="📡", layout="wide")
+    st.title(t("page_title"))
 
-    # Constants
+
+    # Constants (sin cambios)
     DATASET_URLS = {
         "Modelo 1.95GHz": {
             "base": "datasets/1.95_GHz_dataset", 
@@ -999,9 +1049,12 @@ def main():
         if key not in st.session_state:
             st.session_state[key] = None
 
-    # AGREGAR ESTA LÍNEA con las demás inicializaciones
     if 'show_citation' not in st.session_state:
         st.session_state.show_citation = False
+
+    # NUEVO: Inicializar tab activo para la sección scenarios
+    if 'active_scenario_tab' not in st.session_state:
+        st.session_state.active_scenario_tab = 0
 
     def create_segmentation_mask(power_map, antenna_pos):
         """
@@ -1098,329 +1151,376 @@ def main():
         
         return mask, red_radius, yellow_radius                                                                                                                                                       
     
-    # Función helper para crear headers estilizados
-    def crear_header_seccion(titulo, subtitulo, icono="📱"):
+    # ===== FUNCIÓN HELPER PARA HEADERS (actualizada) =====
+    def crear_header_seccion(titulo_key, subtitulo_key, icono="📱"):
         st.markdown(f"""
         <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
             <h1 style="color: white; text-align: center; margin: 0; font-size: 2.5em;">
-                {icono} {titulo}
+                {icono} {t(titulo_key)}
             </h1>
             <h3 style="color: #e8f4fd; text-align: center; margin-top: 10px; font-weight: 300;">
-                {subtitulo}
+                {t(subtitulo_key)}
             </h3>
         </div>
         """, unsafe_allow_html=True)
 
-    # Sidebar
+    # ===== BARRA LATERAL =====
+# REEMPLAZA TODO EL SIDEBAR (busca "with st.sidebar:" y reemplaza hasta el siguiente elif/if principal)
+
     with st.sidebar:
-        st.header("SECCIONES")
-        vista_seleccionada = st.radio(
-            "Seleccione una opción:",
-            ["Manual de usuario", "Datasets de imágenes", "Modelos y evaluación", "Evaluar nuevos escenarios", "Artículo y publicaciones"]
+        st.markdown("---")
+        
+        # ===== INICIALIZAR VISTA SELECCIONADA =====
+        if 'current_view' not in st.session_state:
+            st.session_state.current_view = "manual"
+        
+        # ===== SELECTOR DE IDIOMA =====
+        st.markdown(
+            "<h4 style='margin-bottom: 15px;'><b>Language / Idioma:</b></h4>",
+            unsafe_allow_html=True
         )
-
         
-    if vista_seleccionada == "Manual de usuario":
+        # Crear dos columnas para los botones de idioma
+        lang_col1, lang_col2 = st.columns(2)
+        
+        with lang_col1:
+            if st.session_state.language == "en":
+                st.markdown("""
+                <div style="background-color: rgba(255, 107, 53, 0.2); border: 2px solid #FF6B35; border-radius: 0.5rem; padding: 8px; text-align: center;">
+                    <span style="color: #FF6B35; font-weight: 600;">🇺🇸 English</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                if st.button("🇺🇸 English", key="lang_en_btn", use_container_width=True):
+                    st.session_state.language = "en"
+                    st.rerun()
+        
+        with lang_col2:
+            if st.session_state.language == "es":
+                st.markdown("""
+                <div style="background-color: rgba(255, 107, 53, 0.2); border: 2px solid #FF6B35; border-radius: 0.5rem; padding: 8px; text-align: center;">
+                    <span style="color: #FF6B35; font-weight: 600;">🇪🇸 Español</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                if st.button("🇪🇸 Español", key="lang_es_btn", use_container_width=True):
+                    st.session_state.language = "es"
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        # ===== MENÚ PRINCIPAL =====
+        st.markdown(
+            "<h4 style='margin-bottom: 15px;'><b>" + t("sidebar_header") + "</b></h4>",
+            unsafe_allow_html=True
+        )
+        
+        # Crear opciones de menú traducidas
+        menu_options = {
+            t("menu_manual"): "manual",
+            t("menu_datasets"): "datasets", 
+            t("menu_models"): "models",
+            t("menu_scenarios"): "scenarios",
+        }
+        
+        menu_labels = list(menu_options.keys())
+        menu_values = list(menu_options.values())
+        
+        # Crear botones verticales para el menú
+        for idx, (label, value) in enumerate(menu_options.items()):
+            if st.session_state.current_view == value:
+                # Mostrar como caja naranja si está activo
+                st.markdown(f"""
+                <div style="background-color: rgba(255, 107, 53, 0.2); border: 2px solid #FF6B35; border-radius: 0.5rem; padding: 12px; text-align: center; margin-bottom: 8px;">
+                    <span style="color: #FF6B35; font-weight: 600;">{label}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Mostrar como botón normal si no está activo
+                if st.button(label, key=f"menu_btn_{idx}", use_container_width=True):
+                    st.session_state.current_view = value
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        # Obtener la vista actual para usarla después
+        vista_seleccionada = st.session_state.current_view
+        
+        # CAMBIO: Actualizar la vista actual en session_state
+        st.session_state.current_view = vista_seleccionada
+
+
+    # ===== SECCIÓN: MANUAL DE USUARIO =====
+    if vista_seleccionada == "manual":
         crear_header_seccion(
-            titulo="Manual de Usuario",
-            subtitulo="ZonaCEM AI - Estimación de Zonas de Exposición a CEM",
+            titulo_key="header_manual_title",
+            subtitulo_key="header_manual_subtitle",
             icono="📱"
-        ) 
-         
-        # Introducción general  
-        st.markdown("""
-        ### 🎯 Bienvenido a ZonaCEM AI
+        )
         
-        **ZonaCEM AI** es una aplicación de inteligencia artificial diseñada para predecir la distribución de potencia 
-        de estaciones base celulares en diferentes frecuencias, facilitando la planificación, vigilancia y control 
-        de redes móviles. 
-
-        La predicción mapas de potencia recibida en estaciones base celulares es una tarea importante en la planificación de redes móviles, incluyendo su posterior vigilancia y control.
+        # CAMBIO COMPLETO: Todo el contenido usando funciones de traducción
+        st.markdown(f"### 🎯 {t('welcome_title')}")
         
-        En esta aplicación, se utilizan modelos de inteligencia artificial para predecir la distribución de potencia de estaciones base celulares que funcionan en diferentes frecuencias.
-        Se generaron tres datasets de imágenes que simulan estaciones base celulares para las frecuencias de 1.95GHz, 2.13GHz y 2.65GHz, cada uno con las siguientes capas: 
+        st.markdown(t("welcome_intro"))
         
-        - **Estructuras**: Representación de edificaciones y obstáculos(paredes). 
-        - **Puntos de medición**: Ubicación de las mediciones dispersas de potencia realizadas.
-        - **Posición de antena**: Ubicación de la estación base.  
-        - **Mapa de potencia**: Distribución de potencia recibida.
+        #st.markdown(t("app_description"))
         
-        Las tres primeras capas corresponden a las entradas de los modelos, por lo que esta aplicación predice la potencia recibida a partir de las estructuras, medidas dispersas y posición de la estación base y su altura.
+        # Lista de capas con formato
+        st.markdown(t('datasets_intro'))
+        st.markdown(f"""
+    - **{t('layer_structures')}**: {t('structures_description')}
+    - **{t('layer_measurements')}**: {t('measurements_description')}
+    - **{t('layer_antenna')}**: {t('antenna_description')}
+    - **{t('layer_power')}**: {t('power_description')}
+    """)
         
-        La altura de las estructuras y la antena se mide en metros mientras que el mapa de potencia recibida se mide en dBm al igual que las mediciones dispersas.
-        Estas magnitudes se representan con diferentes intensidades de color en las imágenes en escala de grises, siendo el color blanco el valor más alto.
-                    
-        """)
+        st.markdown(t('prediction_description'))
+        st.markdown(t('units_description'))
         
         # Guía de secciones de la aplicación
-        st.subheader("🗺️ Guía de Secciones")
-         
+        st.subheader(f"🗺️ {t('sections_guide')}")
+        
         # Sección 1: Datasets
-        with st.expander("1️⃣ **Datasets de Imágenes** - Explorar datos de entrenamiento", expanded=False):
+        with st.expander(f"1️⃣ **{t('section_datasets')}** - {t('section_datasets_subtitle')}", expanded=False):
             col_ds1, col_ds2 = st.columns([2, 1])
             
             with col_ds1:
-                st.markdown("""
-                **🎯 Propósito:** Visualizar y explorar los conjuntos de datos utilizados para entrenar los modelos.
-                
-                **📋 Pasos para usar:**
-                1. **Seleccionar frecuencia** (1.95 GHz, 2.13 GHz, 2.65 GHz)
-                2. **Elegir capa** (Estructuras, Mediciones, Antena, Potencia)
-                3. **Explorar imágenes** disponibles en el dataset
-                
-                **💡 Casos de uso:**
-                - Entender la estructura de los datos
-                - Comparar datasets entre frecuencias
-                - Analizar patrones de propagación
-                """)
+                st.markdown(f"""
+    **🎯 {t('purpose')}:** {t('datasets_purpose')}
+
+    **📋 {t('steps_to_use')}:**
+    1. **{t('select_frequency')}** (1.95 GHz, 2.13 GHz, 2.65 GHz)
+    2. **{t('choose_layer')}** ({t('layer_structures')}, {t('layer_measurements')}, {t('layer_antenna')}, {t('layer_power')})
+    3. **{t('explore_images')}** {t('available_in_dataset')}
+
+    **💡 {t('use_cases')}:**
+    - {t('understand_data_structure')}
+    - {t('compare_datasets')}
+    - {t('analyze_patterns')}
+    """)
             
             with col_ds2:
-                st.info("""
-                **📊 Datasets disponibles:**
-                - Uno por cada una de las 3 frecuencias
-                - 4 capas cada uno
-                - 30 muestras por dataset
-                - Imágenes de 256 x 256 píxeles
-                """)
+                st.info(f"""
+    **📊 {t('available_datasets')}:**
+    - {t('one_per_frequency')}
+    - {t('four_layers_each')}
+    - {t('thirty_samples')}
+    - {t('image_size')}
+    """)
         
         # Sección 2: Modelos y Evaluación
-        with st.expander("2️⃣ **Modelos y Evaluación** - Validar rendimiento de IA", expanded=False):
+        with st.expander(f"2️⃣ **{t('section_models')}** - {t('section_models_subtitle')}", expanded=False):
             col_eval1, col_eval2 = st.columns([2, 1])
             
             with col_eval1:
-                st.markdown("""
-                **🎯 Propósito:** Cargar, evaluar y validar el rendimiento de los modelos entrenados.
-                
-                **📋 Flujo de trabajo:**
-                1. **Seleccionar modelo** → Elegir frecuencia objetivo
-                2. **Cargar modelo** → Botón "Cargar Modelo" 
-                3. **Evaluar** → Botón "Evaluar Modelo"
-                4. **Analizar métricas** → Revisar MAE, RMSE
-                
-                **🔄 Evaluación cruzada:**
-                - Evaluar modelo con datasets de otras frecuencias
-                - Analizar generalización del modelo
-                - Comparar rendimiento entre frecuencias
-                """)
+                st.markdown(f"""
+    **🎯 {t('purpose')}:** {t('models_purpose')}
+
+    **📋 {t('workflow')}:**
+    1. **{t('select_model')}** → {t('choose_target_frequency')}
+    2. **{t('load_model')}** → {t('load_model_button')}
+    3. **{t('evaluate')}** → {t('evaluate_model_button')}
+    4. **{t('analyze_metrics')}** → {t('review_mae_rmse')}
+
+    **🔄 {t('cross_evaluation')}:**
+    - {t('evaluate_other_datasets')}
+    - {t('analyze_generalization')}
+    - {t('compare_performance')}
+    """)
             
             with col_eval2:
-                st.success("""
-                **📈 Métricas incluidas:**
-                - MAE (Error Absoluto Medio)
-                - RMSE (Raíz del Error Cuadrático Medio)
-                - Visualizaciones comparativas
-                """)
+                st.success(f"""
+    **📈 {t('included_metrics')}:**
+    - MAE ({t('mae_description')})
+    - RMSE ({t('rmse_description')})
+    - {t('comparative_visualizations')}
+    """)
         
         # Sección 3: Nuevos Escenarios
-        with st.expander("3️⃣ **Evaluar Nuevos Escenarios** - Predicciones personalizadas", expanded=False):
-            st.markdown("""
-            **🎯 Propósito:** Crear escenarios personalizados y obtener predicciones de distribución de potencia.
-                        
-            Esta opción permite aplicar los modelos entrenados en las tres frecuencias en escenarios nuevos sin etiquetas para predecir la distribución de potencia.
+        with st.expander(f"3️⃣ **{t('section_scenarios')}** - {t('section_scenarios_subtitle')}", expanded=False):
+            st.markdown(f"""
+    **🎯 {t('purpose')}:** {t('scenarios_purpose')}
 
-            """)
-            
-            st.markdown("""
+    {t('scenarios_intro')}
 
-            Todas las variables tienen un rango de valores específico, que se deben seguir para obtener una predicción adecuada. 
-            
-            Las imágenes guardadas se mostrarán en la barra lateral, donde se podrá descargar o borrar las imágenes guardadas. Con las imágenes descargadas se podrá evaluar el modelo seleccionando Evaluar Escenarios. No se puede evaluar los modelos simplemente con guardar las imágenes es necesario descargarlas para subirlas en el lugar señalado para cada capa.
-                        
-            """)
+    {t('value_ranges_info')}
+
+    {t('saved_images_info')}
+    """)
 
             # Subsecciones detalladas
-            st.markdown("### 🛠️ **Herramientas de Construcción de Escenarios**")
+            st.markdown(f"### 🛠️ **{t('scenario_tools')}**")
             
-            tab_struct, tab_antenna, tab_measure = st.tabs(["🏗️ Estructuras", "📡 Antenas", "📊 Mediciones"])
+            tab_struct, tab_antenna, tab_measure = st.tabs([
+                f"🏗️ {t('tab_structures_full')}", 
+                f"📡 {t('tab_antenna_full')}", 
+                f"📊 {t('tab_measurements_full')}"
+            ])
             
             with tab_struct:
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
-                    st.markdown("""
-                    **🏢 Construcción de Estructuras**
-                    
-                    **Elementos disponibles:**
-                    - **Líneas:** Paredes
-                    - **Rectángulos:** Edificios completos
-                    
-                    **Parámetros configurables:**
-                    - Coordenadas X, Y
-                    - Altura en metros
-                    - Dimensiones (para rectángulos)
-                    """)
+                    st.markdown(f"""
+    **🏢 {t('building_structures')}**
 
-                st.markdown("""El usuario puede construir líneas y rectángulos para representar las estructuras y obstáculos, indicando la ubicación y altura. Una vez definidos los parámetros se selecciona la opción Añadir estructura, lo que hará visible la estructura en la imagen para poder continuar con la siguiente estructura. Si ingresó un dato que no es correcto, puede presionar el boton Deshacer para borrar la última estructura añadida, o en su defecto Borrar Todo, si lo que desea es empezar de cero. Al terminar de definir todas las estructuras se selecciona Guardar para guardar la imagen en memoria de la aplicación.
-                            
-                """)
+    **{t('available_elements')}:**
+    - **{t('lines')}:** {t('walls')}
+    - **{t('rectangles')}:** {t('complete_buildings')}
+
+    **{t('configurable_parameters')}:**
+    - {t('coordinates_xy')}
+    - {t('height_meters')}
+    - {t('dimensions_rectangles')}
+    """)
+
+                st.markdown(t('structures_instructions'))
 
                 with col_s2:
-                    st.markdown("""
-                    **⚙️ Controles de Edición**
-                    
-                    - 🟢 **Añadir estructura** → Confirmar elemento
-                    - ↩️ **Deshacer** → Eliminar último elemento  
-                    - 🗑️ **Borrar Todo** → Reiniciar canvas
-                    - 💾 **Guardar** → Finalizar capa de estructuras
-                    
-                    """)
+                    st.markdown(f"""
+    **⚙️ {t('editing_controls')}**
+
+    - 🟢 **{t('add_structure')}** → {t('confirm_element')}
+    - ↩️ **{t('undo')}** → {t('remove_last_element')}
+    - 🗑️ **{t('clear_all')}** → {t('restart_canvas')}
+    - 💾 **{t('save')}** → {t('finalize_layer')}
+    """)
             
             with tab_antenna:
                 col_a1, col_a2 = st.columns(2)
                 with col_a1:
-                    st.markdown("""
-                    **📡 Posicionamiento de Antena**
-                    
-                    **Parámetros:**
-                    - **Coordenada X** (posición horizontal)
-                    - **Coordenada Y** (posición vertical)  
-                    - **Altura** (en metros)
-                    
-                    **Restricciones:**
-                    - Solo una estación base por escenario
+                    st.markdown(f"""
+    **📡 {t('antenna_positioning')}**
 
-                    """)
+    **{t('parameters')}:**
+    - **{t('coordinate')} X** ({t('horizontal_position')})
+    - **{t('coordinate')} Y** ({t('vertical_position')})
+    - **{t('height')}** ({t('in_meters')})
+
+    **{t('restrictions')}:**
+    - {t('one_antenna_per_scenario')}
+    """)
                 
-                st.markdown("""El usuario puede seleccionar la ubicación y altura de la antena, y seleccionar Colocar Punto para mostrar la antena en la imagen. 
-                             Puede borrar la antena seleccionada presionando Borrar, o simplemente definir una posición y seleccionar nuevamente Colocar Punto. Finalmente debe seleccionar Guardar punto para guardar la imagen.""")
+                st.markdown(t('antenna_instructions'))
 
                 with col_a2:
-                    st.markdown("""
-                    **⚙️ Controles**
-                    
-                    - 📍 **Colocar Punto** → Posicionar antena
-                    - 🗑️ **Borrar** → Eliminar antena actual
-                    - 💾 **Guardar punto** → Confirmar posición
-                    
-                    """)
+                    st.markdown(f"""
+    **⚙️ {t('controls')}**
+
+    - 📍 **{t('place_point')}** → {t('position_antenna')}
+    - 🗑️ **{t('delete')}** → {t('remove_current_antenna')}
+    - 💾 **{t('save_point')}** → {t('confirm_position')}
+    """)
             
             with tab_measure:
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
-                    st.markdown("""
-                    **📊 Puntos de Medición**
-                    
-                    **Datos requeridos:**
-                    - **Posición X, Y** en el mapa
-                    - **Valor de potencia** en dBm
-                    - **Mediciones completas** 30 para tener el rendimiento adecuado 
-                                
-                    """)
+                    st.markdown(f"""
+    **📊 {t('measurement_points')}**
+
+    **{t('required_data')}:**
+    - **{t('position')} X, Y** {t('on_map')}
+    - **{t('power_value')}** {t('in_dbm')}
+    - **{t('complete_measurements')}** {t('thirty_for_performance')}
+    """)
                 
-                st.markdown(""" Se debe seleccionar Añadir Medición para agregar la medición en la imagen y continuar con la siguiente hasta completar todas las mediciones. 
-                        Si se ingresó un dato incorrecto, se puede borrar la última medición añadida presionando Deshacer, o en su defecto Borrar Todo para empezar de cero. Al finalizar se selecciona Guardar para guardar la imagen en memoria de la aplicación.""")
+                st.markdown(t('measurements_instructions'))
 
                 with col_m2:
-                    st.markdown("""
-                    **⚙️ Gestión de Mediciones**
-                    
-                    - ➕ **Añadir Medición** → Confirmar punto
-                    - ↩️ **Deshacer** → Eliminar último punto
-                    - 🗑️ **Borrar Todo** → Limpiar todas las mediciones
-                    - 💾 **Guardar** → Finalizar capa y guardarla
-                    
-                    """)
+                    st.markdown(f"""
+    **⚙️ {t('measurement_management')}**
+
+    - ➕ **{t('add_measurement')}** → {t('confirm_point')}
+    - ↩️ **{t('undo')}** → {t('remove_last_point')}
+    - 🗑️ **{t('clear_all')}** → {t('clear_all_measurements')}
+    - 💾 **{t('save')}** → {t('finalize_and_save')}
+    """)
             
             # Evaluación del escenario
-            st.markdown("### 🚀 **Proceso de Evaluación**")
+            st.markdown(f"### 🚀 **{t('evaluation_process')}**")
             col_proc1, col_proc2 = st.columns(2)
             
             with col_proc1:
-                st.markdown("""
-                **Si se generan las capas en esta aplicaciónión:**
+                st.markdown(t('evaluation_steps'))
     
-                1. Completar la construcción las 3 capas de entrada y guardarlas
-                2. Descargar imágenes desde el la barra lateral
-                3. Cargar cada imagen en la pestaña correspondiente desde el botón Buscar archivos
-                4. Seleccionar modelo de evaluación en la pestaña Evaluación
-                5. Activar la calibración adaptativa para obtener mejores resultados, o desactivar si desea obtener la predicción del modelo sin calibrar
-                6. Presionar el botón Ejecutar Evaluación para realizar la predicción
-                7. Descargar las imágenes predichas desde el botón Descargar imagen en la parte inferior de cada imagen (Opcional)
-
-                **Si las imágenes ya están generadas:**
-                    Omitir los pasos 1 y 2.
-                        
-                """)
-        
-        # Sección 4: Artículo y Publicaciones
-        with st.expander("4️⃣ **Artículo y Publicaciones** - Documentación académica", expanded=False):
-            col_art1, col_art2 = st.columns(2)
-            
-            with col_art1:
-                st.markdown("""
-                **📄 Contenido disponible:**
-                - Artículo científico completo
-                
-                **🔗 Recursos:**
-                - Repositorio Zenodo (DOI)
-                - Código fuente (GitLab)
-                """)
-            
-            with col_art2:
-                st.markdown("""
-                **📖 Visualización:**
-                - Vista previa integrada del PDF
-                - Acceso directo al documento
-                - Descarga para uso offline
-                
-                **🎓 Uso académico:**
-                - DOI para referencia permanente
-                - Acceso abierto y gratuito
-                """)
         
         # Mejores prácticas y recomendaciones
-        st.subheader("💡 Mejores Prácticas y Recomendaciones")
+        st.subheader(f"💡 {t('best_practices')}")
         
         col_tips1, col_tips2 = st.columns(2)
         
         with col_tips1:
-            with st.expander("🎯 **Para Mejores Resultados**", expanded=False):
-                st.markdown("""
-                **✅ Recomendaciones:**
-                
-                - **Carga de modelos:** Siempre cargar antes de evaluar
-                - **Datos realistas:** Usar valores dentro de rangos válidos
-                - **Suficientes mediciones:** 30 puntos distribuidos
-                
-                **📊 Rangos válidos:**
-                - **Coordenadas:** 0-255 pixeles
-                - **Alturas:** 3-40 metros  
-                - **Potencia:** -100 a 40 dBm
-                """)
-        
-    elif vista_seleccionada == "Datasets de imágenes":
+            with st.expander(f"🎯 **{t('for_best_results')}**", expanded=False):
+                st.markdown(f"""
+    **✅ {t('recommendations')}:**
+
+    - **{t('model_loading')}:** {t('always_load_before_eval')}
+    - **{t('realistic_data')}:** {t('use_valid_ranges')}
+    - **{t('sufficient_measurements')}:** {t('thirty_distributed_points')}
+
+    **📊 {t('valid_ranges')}:**
+    - **{t('coordinates')}:** {t('coordinates_range')}
+    - **{t('heights')}:** {t('heights_range')}
+    - **{t('power')}:** {t('power_range')}
+    """)
+
+    # ===== SECCIÓN: DATASETS =====
+    elif vista_seleccionada == "datasets":
         crear_header_seccion(
-            titulo="Datasets de Imágenes",
-            subtitulo="ZonaCEM AI - Exploración de conjuntos de datos de entrenamiento",
+            titulo_key="header_datasets_title",
+            subtitulo_key="header_datasets_subtitle",
             icono="📊"
         )
-        modelo_seleccionado = st.selectbox(
-            "Selecciona un modelo", list(DATASET_URLS.keys())
+        
+        # CAMBIO: Crear nombres de modelos traducidos dinámicamente
+        model_names_translated = {
+            "Modelo 1.95GHz": f"{t('model')} 1.95GHz",
+            "Modelo 2.13GHz": f"{t('model')} 2.13GHz",
+            "Modelo 2.65GHz": f"{t('model')} 2.65GHz"
+        }
+        
+        # Mapeo inverso para obtener la clave original
+        translated_to_original = {v: k for k, v in model_names_translated.items()}
+        
+        modelo_seleccionado_display = st.selectbox(
+            t("select_model"), 
+            list(model_names_translated.values())
         )
         
-        # Crear un diccionario que mapee los nombres en español a los nombres originales
-        folder_mapping = {DATASET_URLS[modelo_seleccionado]["folder_names"][i]: DATASET_URLS[modelo_seleccionado]["folders"][i]
-                         for i in range(len(DATASET_URLS[modelo_seleccionado]["folders"]))}
+        # Obtener la clave original del modelo
+        modelo_seleccionado = translated_to_original[modelo_seleccionado_display]
         
-        # Mostrar los nombres en español en el selectbox
+        # Nombres de carpetas traducidos (sin cambios)
+        folder_names_translated = [
+            t("layer_structures"),
+            t("layer_measurements"),
+            t("layer_antenna"),
+            t("layer_power")
+        ]
+        
+        # Crear mapeo (sin cambios)
+        folder_mapping = {
+            folder_names_translated[i]: DATASET_URLS[modelo_seleccionado]["folders"][i]
+            for i in range(len(folder_names_translated))
+        }
+        
         carpeta_nombre = st.selectbox(
-            "Selecciona una carpeta (capa)", DATASET_URLS[modelo_seleccionado]["folder_names"]
+            t("select_folder"),
+            folder_names_translated
         )
         
-        # Obtener el nombre original de la carpeta para usar en la ruta
         carpeta_seleccionada = folder_mapping[carpeta_nombre]
         
         ruta_base = DATASET_URLS[modelo_seleccionado]["base"]
         ruta_completa = f"{ruta_base}/{carpeta_seleccionada}"
         
-        # Botones de descarga con URLs directas
-        st.subheader("📥 Descargar datasets")
+        # Botones de descarga
+        st.subheader(t("download_datasets"))
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write(f"**📁 Carpeta: {carpeta_nombre}**")
+            st.write(f"**{t('folder_label')} {carpeta_nombre}**")
             
-            # Generar enlace de descarga directa para la carpeta
             folder_download_url = create_direct_download_link(ruta_completa, carpeta_nombre, modelo_seleccionado)
             
             if folder_download_url:
@@ -1438,19 +1538,17 @@ def main():
                         display: inline-block;
                         margin: 5px 0;
                     ">
-                        🔗 Descargar Carpeta
+                        {t('download_folder')}
                     </button>
                 </a>
                 """, unsafe_allow_html=True)
-                
-                #st.info("💡 Haz clic en el botón para descargar ")
             else:
-                st.error("No se pudo generar el enlace de descarga")
+                st.error(t("dataset_error"))
         
         with col2:
-            st.write(f"**📦 Dataset Completo: {modelo_seleccionado}**")
+            # CAMBIO: Usar nombre traducido para mostrar
+            st.write(f"**{t('complete_dataset')} {modelo_seleccionado_display}**")
             
-            # Generar enlace de descarga directa para todo el dataset
             dataset_download_url = create_direct_dataset_download_link(ruta_base, modelo_seleccionado)
             
             if dataset_download_url:
@@ -1468,43 +1566,34 @@ def main():
                         display: inline-block;
                         margin: 5px 0;
                     ">
-                        🔗 Descargar Dataset Completo
+                        {t('download_complete')}
                     </button>
                 </a>
                 """, unsafe_allow_html=True)
                 
-                st.warning("⚠️ El dataset completo puede ser un archivo grande")
+                st.warning(t("dataset_warning"))
             else:
-                st.error("No se pudo generar el enlace del dataset")
+                st.error(t("dataset_error"))
         
-        # Opción alternativa (botones tradicionales como fallback)
         st.divider()
-
-        col3, col4 = st.columns(2)
-                 
-        # Vista previa de imágenes
-        st.subheader(f"🖼️ Vista previa - Carpeta: {carpeta_nombre}")
+        
+        # Vista previa de imágenes (sin cambios)
+        st.subheader(f"{t('preview_images')}{carpeta_nombre}")
         
         try:
             project = get_project()
-            
-            # Usar la función para obtener más imágenes para vista previa
-            #st.info("Cargando vista previa de 50 imágenes...")
             imagenes_preview = get_preview_images(project, ruta_completa, num_images=50)
             
             if imagenes_preview: 
-                # Mostrar información básica
                 total_encontradas = len(imagenes_preview)
-                st.info(f"Vista previa: Mostrando **{min(50, total_encontradas)}** imágenes de esta carpeta.")
+                st.info(t("showing_images", num=min(50, total_encontradas)))
                 
-                # Seleccionar hasta 50 imágenes aleatorias para la vista previa
                 num_mostrar = min(50, total_encontradas)
                 if total_encontradas > 50:
                     imagenes_muestra = random.sample(imagenes_preview, 50)
                 else:
                     imagenes_muestra = imagenes_preview
                 
-                # Mostrar en filas de 5 columnas para mejor visualización
                 cols = st.columns(5)
                 imagenes_cargadas = 0
                 
@@ -1519,45 +1608,59 @@ def main():
                         except Exception as e:
                             st.error(f"Error: {os.path.basename(imagen_path)}")
                 
-                st.success(f"✅ Se cargaron {imagenes_cargadas}/{num_mostrar} imágenes en la vista previa")
-                            
+                st.success(t("images_loaded", loaded=imagenes_cargadas, total=num_mostrar))
             else:
-                st.warning("❌ No se encontraron imágenes en esta carpeta")
+                st.warning(t("no_images"))
                 
         except Exception as e:
-            st.error(f"❌ Error al acceder al repositorio: {str(e)}")
-        
-    elif vista_seleccionada == "Modelos y evaluación":
+            st.error(t("error_accessing", error=str(e)))
+
+    # ===== SECCIÓN: MODELOS Y EVALUACIÓN =====
+    elif vista_seleccionada == "models":
         crear_header_seccion(
-            titulo="Modelos y Evaluación",
-            subtitulo="ZonaCEM AI - Validación y métricas de rendimiento de los modelos",
+            titulo_key="header_models_title",
+            subtitulo_key="header_models_subtitle",
             icono="🤖"
         )
 
-        st.subheader("Selección de modelo y dataset")
+        st.subheader(t("model_selection"))
+
+        # CAMBIO: Crear nombres de modelos traducidos
+        model_names_translated = {
+            "Modelo 1.95GHz": f"{t('model')} 1.95GHz",
+            "Modelo 2.13GHz": f"{t('model')} 2.13GHz",
+            "Modelo 2.65GHz": f"{t('model')} 2.65GHz"
+        }
+        
+        # Mapeo inverso
+        translated_to_original_models = {v: k for k, v in model_names_translated.items()}
 
         # Crear dos columnas para los selectores
         col1, col2 = st.columns(2) 
- 
+    
         with col1:
-            st.write("**Modelo a cargar:**")
-            modelo_seleccionado = st.selectbox(
-                "Selecciona un modelo para cargar", 
-                list(MODELOS.keys()),
+            st.write(f"**{t('model_to_load')}**")
+            modelo_seleccionado_display = st.selectbox(
+                t("select_model_load"), 
+                list(model_names_translated.values()),
                 key="modelo_selector"
             )
+            # Obtener clave original
+            modelo_seleccionado = translated_to_original_models[modelo_seleccionado_display]
 
         with col2:
-            st.write("**Dataset para evaluación:**")
-            dataset_seleccionado = st.selectbox(
-                "Selecciona dataset para evaluar", 
-                list(DATASET_URLS.keys()),
+            st.write(f"**{t('dataset_evaluation')}**")
+            dataset_seleccionado_display = st.selectbox(
+                t("select_dataset_eval"), 
+                list(model_names_translated.values()),
                 key="dataset_selector"
             )
+            # Obtener clave original
+            dataset_seleccionado = translated_to_original_models[dataset_seleccionado_display]
 
         # Botón de descarga del modelo
-        st.subheader("📥 Descargar modelo")
-        st.write(f"**🤖 Modelo seleccionado: {modelo_seleccionado}**")
+        st.subheader(t("download_model"))
+        st.write(f"**{t('selected_model')} {modelo_seleccionado_display}**")
 
         # Generar enlace de descarga directa para el modelo
         model_download_url = MODELOS[modelo_seleccionado]
@@ -1580,33 +1683,42 @@ def main():
                 display: inline-block;
                 margin: 5px 0;
             ">
-                🔗 Descargar Modelo {modelo_seleccionado}
+                {t('download_model_button', name=modelo_seleccionado_display)}
             </button>
         </a>
         """, unsafe_allow_html=True)
 
-        st.info("💡 El archivo del modelo puede ser grande (varios MB). La descarga comenzará automáticamente.")
+        st.info(t("model_download_info"))
         st.divider()
 
-        # Display currently loaded model
+        # CAMBIO: Display currently loaded model con traducción
         if st.session_state['modelo_actual'] and st.session_state['nombre_modelo_actual']:
-            st.info(f"📊 Modelo actualmente cargado en memoria: **{st.session_state['nombre_modelo_actual']}**")
+            # Traducir el nombre del modelo cargado
+            loaded_model_translated = model_names_translated.get(
+                st.session_state['nombre_modelo_actual'], 
+                st.session_state['nombre_modelo_actual']
+            )
+            st.info(f"{t('model_loaded')} **{loaded_model_translated}**")
         else:
-            st.warning("⚠️ No hay ningún modelo cargado actualmente. Por favor, carga un modelo antes de evaluarlo.")
+            st.warning(t("no_model_loaded"))
         
-        # Model button (solo queda un botón, así que no necesitamos columnas)
-        if st.button("Cargar modelo para evaluarlo"):
+        # Model button
+        if st.button(t("load_model_button")):
             # Clear previous model if exists
             if st.session_state['modelo_actual']:
                 st.session_state['modelo_actual'] = None
                 import gc
-                gc.collect()  # Help free memory
+                gc.collect()
                 
             # Load new model with progress bar
-            modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado)
+            #modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado)
+
+            modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado, st.session_state.language)  # ← AGREGAR EL PARÁMETRO
+
+
             if modelo:
                 show_model_info(modelo)
-                st.success(f"✅ Modelo {modelo_seleccionado} cargado exitosamente")
+                st.success(t("model_loaded_success", name=modelo_seleccionado_display))
                 st.session_state['modelo_actual'] = modelo
                 st.session_state['nombre_modelo_actual'] = modelo_seleccionado
                 st.rerun()
@@ -1614,28 +1726,36 @@ def main():
         # Evaluation section
         eval_col1, eval_col2 = st.columns([3, 1])
         with eval_col1:
-            st.subheader("Evaluación del modelo")
-            st.write("Presiona el botón para evaluar el modelo con los datos seleccionados.")
+            st.subheader(t("evaluation_section"))
+            st.write(t("evaluation_description"))
         
         with eval_col2:
             is_model_loaded = st.session_state['modelo_actual'] is not None
-            evaluar_clicked = st.button("Evaluar modelo", disabled=not is_model_loaded)
-    
+            evaluar_clicked = st.button(t("evaluate_model_button"), disabled=not is_model_loaded)
+
         if evaluar_clicked and is_model_loaded:
             dataset_path = DATASET_URLS[dataset_seleccionado]["base"]
             
-            # Warning if dataset doesn't match model
+            # Warning if dataset doesn't match model - CAMBIO: usar nombres traducidos
             if dataset_seleccionado != st.session_state['nombre_modelo_actual']:
-                st.warning(f"⚠️ Estás evaluando el modelo **{st.session_state['nombre_modelo_actual']}** con el dataset de **{dataset_seleccionado}**. Los resultados pueden no ser óptimos.")
+                loaded_model_translated = model_names_translated.get(
+                    st.session_state['nombre_modelo_actual'],
+                    st.session_state['nombre_modelo_actual']
+                )
+                st.warning(t("evaluation_warning", 
+                        model=loaded_model_translated,
+                        dataset=dataset_seleccionado_display))
             
-            evaluate_model(st.session_state['modelo_actual'], dataset_path)
+            # CAMBIO: Llamar a evaluate_model con parámetro de idioma
+            #evaluate_model(st.session_state['modelo_actual'], dataset_path, language=st.session_state.language)
+            evaluate_model(st.session_state['modelo_actual'], dataset_path, language=st.session_state.language)
 
-    # Evaluar nuevos escenarios
-    elif vista_seleccionada == "Evaluar nuevos escenarios":
+# ===== SECCIÓN: EVALUAR NUEVOS ESCENARIOS =====
+    elif vista_seleccionada == "scenarios":
             crear_header_seccion(
-                titulo="Evaluación de Nuevos Escenarios",
-                subtitulo="ZonaCEM AI - Predicciones personalizadas con modelos entrenados",
-                icono="🎯"
+                titulo_key="header_models_title",
+                subtitulo_key="header_models_subtitle",
+                icono="🤖"
             )
 
             def calculate_intensity(value, min_val, max_val):
@@ -1769,18 +1889,23 @@ def main():
                     return image, temp_path
                 return None, None
 
-            def display_image_with_matplotlib(pil_image, title, data_type=None):
+            def display_image_with_matplotlib(pil_image, title, data_type=None, language='es'):
                 """Muestra una imagen con matplotlib con valores reales"""
+                from translations import get_text
+                
+                def t(key, **kwargs):
+                    return get_text(key, language, **kwargs)
+                
                 img_array = np.array(pil_image)
                 
                 # Configurar vmin, vmax y etiqueta según tipo de datos
                 config = {
-                    "estructuras": (3, 20, "Altura (m)"),
-                    "trasmisor": (10, 40, "Altura (m)"),
-                    "mediciones": (-100, 40, "Señal (dBm)")
+                    "estructuras": (3, 20, t("height_label")),
+                    "trasmisor": (10, 40, t("height_label")),
+                    "mediciones": (-100, 40, t("signal_label"))
                 }
                 
-                vmin, vmax, cbar_label = config.get(data_type, (0, 255, "Intensidad"))
+                vmin, vmax, cbar_label = config.get(data_type, (0, 255, t("intensity_label")))
                 
                 # Crear figura y mostrar imagen
                 fig, ax = plt.subplots(figsize=(8, 6))
@@ -1788,8 +1913,8 @@ def main():
                 im = ax.imshow(img_array, cmap='viridis', extent=[0, 50, 0, 50], norm=norm, origin='upper')
                 
                 # Configurar ejes y título
-                ax.set_xlabel('Distancia (m)')
-                ax.set_ylabel('Distancia (m)')
+                ax.set_xlabel(t("distance_m"))
+                ax.set_ylabel(t("distance_m"))
                 ax.set_title(title, pad=20)
                 ax.grid(True, linestyle='--', alpha=0.3)
                 
@@ -1806,118 +1931,133 @@ def main():
                 plt.tight_layout()
                 return fig
             
-            def create_common_editor_components(data_type, edit_function):
+            def create_common_editor_components(data_type, edit_function, language='es'):
                 """Componentes comunes para todos los editores"""
+                from translations import get_text
                 
-                # CSS corregido para personalizar completamente el file uploader
-                st.markdown("""
+                def t(key, **kwargs):
+                    return get_text(key, language, **kwargs)
+                
+                # CSS para personalizar file uploader
+                upload_text = t("upload_your_image") if language == 'es' else "Upload your image here"
+                browse_text = t("browse_files") if language == 'es' else "Browse files"
+                limit_text = t("file_limit") if language == 'es' else "Limit 200MB per file • PNG, JPG, JPEG"
+                
+                st.markdown(f"""
                 <style>
                 /* Ocultar completamente TODO el contenido del botón original */
-                div[data-testid="stFileUploader"] button {
+                div[data-testid="stFileUploader"] button {{
                     font-size: 0 !important;
                     position: relative;
-                }
+                }}
                 
-                div[data-testid="stFileUploader"] button * {
+                div[data-testid="stFileUploader"] button * {{
                     display: none !important;
-                }
+                }}
                 
-                /* Reemplazar con texto en español para el botón */
-                div[data-testid="stFileUploader"] button::before {
-                    content: "Buscar archivos";
+                /* Reemplazar con texto en el idioma seleccionado para el botón */
+                div[data-testid="stFileUploader"] button::before {{
+                    content: "{browse_text}";
                     font-size: 14px;
                     font-weight: 500;
                     color: white;
                     display: block !important;
-                }
+                }}
                 
                 /* Ocultar COMPLETAMENTE todo el contenido original del área de arrastre */
-                div[data-testid="stFileUploader"] section > div {
+                div[data-testid="stFileUploader"] section > div {{
                     display: none !important;
-                }
+                }}
                 
                 /* Ocultar cualquier elemento small */
-                div[data-testid="stFileUploader"] small {
+                div[data-testid="stFileUploader"] small {{
                     display: none !important;
-                }
+                }}
                 
                 /* Ocultar cualquier SVG o icono original */
-                div[data-testid="stFileUploader"] svg {
+                div[data-testid="stFileUploader"] svg {{
                     display: none !important;
-                }
+                }}
                 
                 /* Personalizar el área de arrastre */
-                div[data-testid="stFileUploader"] section {
+                div[data-testid="stFileUploader"] section {{
                     position: relative;
                     min-height: 120px;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
                     align-items: center;
-                }
+                }}
                 
                 /* Crear ÚNICAMENTE nuestro icono de nube personalizado */
-                div[data-testid="stFileUploader"] section::before {
+                div[data-testid="stFileUploader"] section::before {{
                     content: "☁️";
                     font-size: 32px;
                     margin-bottom: 12px;
                     display: block;
-                }
+                }}
                 
-                /* Añadir el texto principal en español */
-                div[data-testid="stFileUploader"] section::after {
-                    content: "Sube tu imagen aquí";
+                /* Añadir el texto principal en el idioma seleccionado */
+                div[data-testid="stFileUploader"] section::after {{
+                    content: "{upload_text}";
                     display: block;
                     text-align: center;
                     color: #666;
                     font-size: 16px;
                     font-weight: 500;
                     margin-bottom: 0;
-                }
+                }}
                 
                 /* Crear un elemento adicional para el límite de archivo */
-                div[data-testid="stFileUploader"]::after {
-                    content: "Límite 200MB por archivo • PNG, JPG, JPEG";
+                div[data-testid="stFileUploader"]::after {{
+                    content: "{limit_text}";
                     display: block;
                     color: #888;
                     font-size: 12px;
                     text-align: center;
                     margin-top: 8px;
                     padding-top: 4px;
-                }
+                }}
                 
                 /* Ocultar el botón adicional que aparece después de cargar archivo */
-                div[data-testid="stFileUploader"] div[data-testid="fileUploader"] button:not(:first-child) {
+                div[data-testid="stFileUploader"] div[data-testid="fileUploader"] button:not(:first-child) {{
                     display: none !important;
-                }
+                }}
                 
                 /* Ocultar botones adicionales en el área de archivos cargados */
-                div[data-testid="stFileUploader"] .uploadedFiles button {
+                div[data-testid="stFileUploader"] .uploadedFiles button {{
                     display: none !important;
-                }
+                }}
                 
                 /* Ocultar todos los botones que aparecen después del archivo cargado */
-                div[data-testid="stFileUploader"] section + * button {
+                div[data-testid="stFileUploader"] section + * button {{
                     display: none !important;
-                }
+                }}
                 
                 /* Asegurar que no se muestren otros elementos de texto */
-                div[data-testid="stFileUploader"] section div {
+                div[data-testid="stFileUploader"] section div {{
                     font-size: 0 !important;
-                }
+                }}
                 
-                div[data-testid="stFileUploader"] section div * {
+                div[data-testid="stFileUploader"] section div * {{
                     font-size: 0 !important;
-                }
+                }}
                 
                 /* Mejorar el espaciado general */
-                div[data-testid="stFileUploader"] {
+                div[data-testid="stFileUploader"] {{
                     margin-bottom: 10px;
-                }
+                }}
                 </style>
                 """, unsafe_allow_html=True)
                 
-                st.subheader(f"Cargar imagen de {data_type}")
+                # Traducir el header correctamente
+                data_type_translations = {
+                    "estructuras": t("layer_structures"),
+                    "trasmisor": t("layer_antenna"),
+                    "mediciones": t("layer_measurements")
+                }
+                
+                st.subheader(f"{t('load_image_title')} {data_type_translations.get(data_type, data_type)}")
                 uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg"], key=f"upload_{data_type}")
                 
                 if uploaded_file:
@@ -1927,18 +2067,20 @@ def main():
                         setattr(st.session_state, f"uploaded_{data_type}_path", temp_path)
 
             def create_building_interface():
-                st.subheader("Editor de estructuras")
+                # CAMBIO: Traducir el header
+                st.subheader(t("editor_structures"))
+                
                 if 'structures' not in st.session_state:
                     st.session_state.structures = []
                 if 'drawing_tool' not in st.session_state:
                     st.session_state.drawing_tool = "linea"
                 
-                # Crear y mostrar imagen
+                # Crear y mostrar imagen (sin cambios)
                 img = Image.new('L', (256, 256), 0)
                 draw = ImageDraw.Draw(img)
                 draw_grid_with_labels(draw)
                 
-                # Dibujar estructuras existentes
+                # Dibujar estructuras existentes (sin cambios)
                 pixels_per_meter = 256/50
                 for struct in st.session_state.structures:
                     intensity = calculate_intensity(struct['altura'], 3, 20)
@@ -1950,37 +2092,43 @@ def main():
                         rect_coords = [(min(x0, x1), min(y0, y1)), (max(x0, x1), max(y0, y1))]
                         draw.rectangle(rect_coords, outline=intensity, width=2)
                 
-                # Mostrar imagen
-                fig = display_image_with_matplotlib(img, "Estructuras", data_type="estructuras")
+                # Mostrar imagen (sin cambios)
+                #fig = display_image_with_matplotlib(img, t("layer_structures"), data_type="estructuras")
+                fig = display_image_with_matplotlib(img, t("layer_structures"), data_type="estructuras", language=st.session_state.language)
+
                 st.pyplot(fig)
                 plt.close(fig)
                 
-                # Cargar imagen
-                create_common_editor_components("estructuras", None)
-                
-                # Controles de dibujo
+                # Cargar imagen (sin cambios)
+                #create_common_editor_components("estructuras", None)
+                create_common_editor_components("estructuras", None, language=st.session_state.language)
+
+
+                # CAMBIO: Traducir controles de dibujo
                 st.session_state.drawing_tool = st.radio(
-                    "Herramienta",
+                    t("drawing_tool"),
                     options=["linea", "rectangulo"],
-                    format_func=lambda x: "Línea" if x == "linea" else "Rectángulo"
+                    format_func=lambda x: t("tool_line") if x == "linea" else t("tool_rectangle")
                 )
                 
-                # Coordenadas
+                # CAMBIO: Traducir labels de coordenadas
                 col1, col2 = st.columns(2)
                 with col1:
-                    start_x_m = st.number_input("X inicial (m)", 0, 50, 25)
-                    start_y_m = st.number_input("Y inicial (m)", 0, 50, 25)
+                    start_x_m = st.number_input(f"{t('x_initial')} (m)", 0, 50, 25)
+                    start_y_m = st.number_input(f"{t('y_initial')} (m)", 0, 50, 25)
                     start_x = int(start_x_m * pixels_per_meter)
                     start_y = int((50 - start_y_m) * pixels_per_meter)
                 with col2:
-                    end_x_m = st.number_input("X final (m)", 0, 50, 35)
-                    end_y_m = st.number_input("Y final (m)", 0, 50, 35)
+                    end_x_m = st.number_input(f"{t('x_final')} (m)", 0, 50, 35)
+                    end_y_m = st.number_input(f"{t('y_final')} (m)", 0, 50, 35)
                     end_x = int(end_x_m * pixels_per_meter)
                     end_y = int((50 - end_y_m) * pixels_per_meter)
                 
-                altura = st.slider("Altura (metros)", 3, 20, 10)
+                # CAMBIO: Traducir altura
+                altura = st.slider(f"{t('height')} ({t('meters')})", 3, 20, 10)
                 
-                if st.button("Añadir estructura", key="add_structure"):
+                # CAMBIO: Traducir botón añadir
+                if st.button(t("add_structure"), key="add_structure"):
                     new_structure = {
                         'tipo': st.session_state.drawing_tool,
                         'coords': [(start_x, start_y), (end_x, end_y)],
@@ -1989,98 +2137,108 @@ def main():
                     st.session_state.structures.append(new_structure)
                     st.rerun()
                 
-                # Botones de acción
+                # CAMBIO: Traducir botones de acción
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button("Borrar todo", key="clear_structures"):
+                    if st.button(t("clear_all"), key="clear_structures"):
                         st.session_state.structures = []
                         st.rerun()
                 with col2:
-                    if st.button("Deshacer", key="undo_structure"):
+                    if st.button(t("undo"), key="undo_structure"):
                         if st.session_state.structures:
                             st.session_state.structures.pop()
                             st.rerun()
                 with col3:
-                    if st.button("Guardar", key="save_structures"):
+                    if st.button(t("save"), key="save_structures"):
                         save_image_and_data(img, "estructuras", st.session_state.structures)
 
             def create_point_interface():
-                st.subheader("Editor de posición de estación base")
+                # CAMBIO: Traducir header
+                st.subheader(t("editor_antenna"))
+                
                 if 'reference_point' not in st.session_state:
                     st.session_state.reference_point = None
                 
-                # Crear y mostrar imagen
+                # Crear y mostrar imagen (sin cambios)
                 img = Image.new('L', (256, 256), 0)
                 draw = ImageDraw.Draw(img)
                 draw_grid_with_labels(draw)
                 
-                # Dibujar punto existente
+                # Dibujar punto existente (sin cambios)
                 pixels_per_meter = 256/50
                 if st.session_state.reference_point:
                     x, y, h = st.session_state.reference_point
                     intensity = calculate_intensity(h, 10, 40)
                     draw.ellipse([(x-2, y-2), (x+2, y+2)], fill=intensity)
                 
-                # Mostrar imagen
-                fig = display_image_with_matplotlib(img, "Posición de estación base", data_type="trasmisor")
+                # Mostrar imagen (CAMBIO: traducir título)
+                #fig = display_image_with_matplotlib(img, t("layer_antenna"), data_type="trasmisor")
+                fig = display_image_with_matplotlib(img, t("layer_antenna"), data_type="trasmisor", language=st.session_state.language)
+
                 st.pyplot(fig)
                 plt.close(fig)
                 
-                # Cargar imagen
-                create_common_editor_components("trasmisor", None)
-                
-                # Controles de posición
+                # Cargar imagen (sin cambios)
+                #create_common_editor_components("trasmisor", None)
+                create_common_editor_components("trasmisor", None, language=st.session_state.language)
+
+                # CAMBIO: Traducir controles de posición
                 col1, col2 = st.columns(2)
                 with col1:
-                    point_x_m = st.number_input("Posición X (m)", 0, 50, 25)
+                    point_x_m = st.number_input(f"{t('position')} X (m)", 0, 50, 25)
                     point_x = int(point_x_m * pixels_per_meter)
                 with col2:
-                    point_y_m = st.number_input("Posición Y (m)", 0, 50, 25)
+                    point_y_m = st.number_input(f"{t('position')} Y (m)", 0, 50, 25)
                     point_y = int((50 - point_y_m) * pixels_per_meter)
                 
-                altura = st.slider("Altura (metros)", 10, 40, 25)
+                # CAMBIO: Traducir altura
+                altura = st.slider(f"{t('height')} ({t('meters')})", 10, 40, 25)
                 
-                if st.button("Colocar punto", key="add_point"):
+                # CAMBIO: Traducir botón colocar
+                if st.button(t("place_point"), key="add_point"):
                     st.session_state.reference_point = (point_x, point_y, altura)
                     st.rerun()
                 
-                # Botones de acción
+                # CAMBIO: Traducir botones de acción
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("Borrar", key="clear_point"):
+                    if st.button(t("delete"), key="clear_point"):
                         st.session_state.reference_point = None
                         st.rerun()
                 with col2:
-                    if st.button("Guardar punto", key="save_point"):
+                    if st.button(t("save_point"), key="save_point"):
                         save_image_and_data(img, "trasmisor", st.session_state.reference_point)
 
             def create_pixel_selector():
-                st.subheader("Selector de puntos de medición")
+                # CAMBIO: Traducir header
+                st.subheader(t("editor_measurements"))
+                
                 if 'measurement_points' not in st.session_state:
                     st.session_state.measurement_points = []
                 
-                # Crear y mostrar imagen
+                # Crear y mostrar imagen (sin cambios)
                 img = Image.new('L', (256, 256), 0)
                 draw = ImageDraw.Draw(img)
                 draw_grid_with_labels(draw)
                 
-                # Dibujar puntos existentes
+                # Dibujar puntos existentes (sin cambios)
                 for point in st.session_state.measurement_points:
                     x, y, dbm = point
                     intensity = calculate_intensity(dbm, -100, 40)
-                    #draw.ellipse([(x-2, y-2), (x+2, y+2)], fill=intensity)
                     draw.point((x, y), fill=intensity)
-                    #draw.point([(x, y), (x+1, y+1)], fill=intensity)
 
-                # Mostrar imagen
-                fig = display_image_with_matplotlib(img, "Mediciones", data_type="mediciones")
+                # Mostrar imagen (CAMBIO: traducir título)
+                #fig = display_image_with_matplotlib(img, t("layer_measurements"), data_type="mediciones")
+                fig = display_image_with_matplotlib(img, t("layer_measurements"), data_type="mediciones", language=st.session_state.language)
+
                 st.pyplot(fig)
                 plt.close(fig)
                 
-                # Cargar imagen
-                create_common_editor_components("mediciones", None)
-                
-                # Controles de posición y valor
+                # Cargar imagen (sin cambios)
+                #create_common_editor_components("mediciones", None)
+                create_common_editor_components("mediciones", None, language=st.session_state.language)
+
+                # CAMBIO: Traducir controles
                 pixels_per_meter = 256/50
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -2090,90 +2248,95 @@ def main():
                     y_m = st.number_input("Y (m)", 0, 50, 25, key="measurement_y")
                     y = int((50 - y_m) * pixels_per_meter)
                 with col3:
-                    dbm = st.number_input("Valor (dBm)", -100, 40, -50)
+                    dbm = st.number_input(f"{t('value')} (dBm)", -100, 40, -50)
                 
-                if st.button("Añadir medición", key="add_measurement"):
+                # CAMBIO: Traducir botón añadir
+                if st.button(t("add_measurement"), key="add_measurement"):
                     st.session_state.measurement_points.append((x, y, dbm))
                     st.rerun()
                 
-                # Botones de acción
+                # CAMBIO: Traducir botones de acción
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button("Borrar todo", key="clear_measurements"):
+                    if st.button(t("clear_all"), key="clear_measurements"):
                         st.session_state.measurement_points = []
                         st.rerun()
                 with col2:
-                    if st.button("Deshacer", key="undo_measurement"):
+                    if st.button(t("undo"), key="undo_measurement"):
                         if st.session_state.measurement_points:
                             st.session_state.measurement_points.pop()
                             st.rerun()
                 with col3:
-                    if st.button("Guardar mediciones", key="save_measurements"):
+                    if st.button(t("save_measurements"), key="save_measurements"):
                         save_image_and_data(img, "mediciones", st.session_state.measurement_points)
 
             def add_model_evaluation_section():
                 """Sección para evaluar escenarios con modelos, calibración adaptativa y resultados detallados"""
-                st.header("Evaluar con el modelo")
+                # CAMBIO: Traducir header
+                st.header(t("evaluate_with_model"))
                 
-                # Constantes para normalización/desnormalización
+                # Constantes para normalización/desnormalización (sin cambios)
                 STRUCT_MIN, STRUCT_MAX = 0, 20        # metros (altura de estructuras)
                 ANTENNA_MIN, ANTENNA_MAX = 10, 40     # metros (altura de antena)
                 POWER_MIN = -100                       # dBm (Piso de ruido térmico)
                 POWER_MAX = 40                         # dBm (Potencia máxima teórica)
                 ACTUAL_POWER_MAX = -10                 # dBm (Máximo real esperado)
                 
-                # Seleccionar modelo
+                # CAMBIO: Traducir selector de modelo
                 modelo_seleccionado = st.selectbox(
-                    "Selecciona un modelo para la evaluación",
+                    t("select_model_evaluation"),
                     list(MODELOS.keys()),
                     key="modelo_selector"
                 )
                 
-                # Verificar si las imágenes necesarias están cargadas
+                # Verificar si las imágenes necesarias están cargadas (sin cambios)
                 required_images = ['estructuras', 'trasmisor', 'mediciones']
                 images_loaded = all(hasattr(st.session_state, f'uploaded_{img}') for img in required_images)
                 
-                # Checkbox para activar calibración adaptativa
+                # CAMBIO: Traducir checkbox de calibración
                 enable_calibration = st.checkbox(
-                    "Activar calibración adaptativa con modelo log-distancia", 
+                    t("enable_calibration"), 
                     value=True,
-                    help="Calibra el modelo usando los puntos de medición para mejorar la precisión"
+                    help=t("calibration_help")
                 )
                 
-                # Botón para ejecutar evaluación
-                if st.button("Ejecutar evaluación", disabled=not images_loaded, key="execute_evaluation_button"):
+                # CAMBIO: Traducir botón de evaluación
+                if st.button(t("execute_evaluation"), disabled=not images_loaded, key="execute_evaluation_button"):
                     if not images_loaded:
-                        st.warning("Debes cargar las tres imágenes antes de evaluar.")
+                        # CAMBIO: Traducir warning
+                        st.warning(t("load_three_images_warning"))
                         return
                     
-                    with st.spinner("Cargando modelo y evaluando..."):
+                    # CAMBIO: Traducir spinner
+                    with st.spinner(t("loading_evaluating")):
                         try:
-                            # Cargar modelo base
-                            modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado)
-                            
+                            # Cargar modelo base (sin cambios)
+                            #modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado)
+                            modelo = download_and_load_model_from_gitlab(MODELOS[modelo_seleccionado], modelo_seleccionado, st.session_state.language)  # ← AGREGAR EL PARÁMETRO
                             if modelo:
-                                # Preparar imágenes
+                                # Preparar imágenes (sin cambios)
                                 struct_img = st.session_state.uploaded_estructuras
                                 pixel_img = st.session_state.uploaded_mediciones
                                 ant_img = st.session_state.uploaded_trasmisor
                                 
                                 # Verificar si se debe realizar calibración adaptativa
                                 if enable_calibration:
-                                    st.info("Realizando calibración adaptativa...")
+                                    # CAMBIO: Traducir info de calibración
+                                    st.info(t("performing_calibration"))
                                     
-                                    # Realizar calibración adaptativa
+                                    # Realizar calibración adaptativa (sin cambios)
                                     calibration_result = perform_adaptive_calibration(
                                         modelo, struct_img, pixel_img, ant_img
                                     )
                                     
                                     if calibration_result['success']:
-                                        # Usar modelo calibrado
+                                        # Usar modelo calibrado (sin cambios hasta...)
                                         modelo_final = calibration_result['calibrated_model']
                                         evaluation = calibration_result['evaluation']
                                         calib_params = calibration_result['calibration_params']
                                         input_image = calibration_result['input_image']
                                         
-                                        # Obtener predicción del modelo calibrado
+                                        # Obtener predicción del modelo calibrado (sin cambios)
                                         prediction_norm = modelo_final.predict(np.expand_dims(input_image, axis=0))[0]
                                         if prediction_norm.shape[-1] > 1:
                                             prediction_norm = prediction_norm[:, :, 0]
@@ -2183,31 +2346,35 @@ def main():
                                         prediction_denorm = prediction_norm * (POWER_MAX - POWER_MIN) + POWER_MIN
                                         pred_np = prediction_denorm
                                         
-                                        st.success("¡Calibración y predicción completadas!")
+                                        # CAMBIO: Traducir success message
+                                        st.success(t("calibration_completed"))
                                         
-                                        # Mostrar métricas de calibración
-                                        st.subheader("Métricas de calibración adaptativa")
+                                        # CAMBIO: Traducir subheader de métricas
+                                        st.subheader(t("calibration_metrics"))
                                         
+                                        # Métricas (sin cambios en los valores, solo labels si es necesario)
                                         col1, col2, col3, col4 = st.columns(4)
                                         with col1:
                                             st.metric("MAE", f"{evaluation['MAE']:.2f} dB")
                                         with col2:
                                             st.metric("RMSE", f"{evaluation['RMSE']:.2f} dB")
                                         with col3:
-                                            st.metric("Error máximo", f"{evaluation['max_error']:.2f} dB")
+                                            st.metric(t("max_error"), f"{evaluation['max_error']:.2f} dB")
                                     else:
-                                        st.error(f"Error en calibración: {calibration_result['error']}")
+                                        # CAMBIO: Traducir error
+                                        st.error(f"{t('calibration_error')}: {calibration_result['error']}")
                                         return
                                 else:
                                     # Evaluación estándar sin calibración
-                                    st.info("Ejecutando predicción estándar...")
+                                    # CAMBIO: Traducir info
+                                    st.info(t("standard_prediction"))
 
-                                    # Preparar entrada IGUAL que en el código de referencia
+                                    # Preparar entrada IGUAL que en el código de referencia (sin cambios)
                                     struct_array = np.array(st.session_state.uploaded_estructuras) / 255.0
                                     pixels_array = np.array(st.session_state.uploaded_mediciones) / 255.0
                                     antenna_array = np.array(st.session_state.uploaded_trasmisor) / 255.0
 
-                                    # Asegurar dimensiones correctas
+                                    # Asegurar dimensiones correctas (sin cambios)
                                     if len(struct_array.shape) == 3:
                                         struct_array = struct_array[:, :, 0] if struct_array.shape[2] == 1 else struct_array.mean(axis=2)
                                     if len(pixels_array.shape) == 3:
@@ -2215,36 +2382,37 @@ def main():
                                     if len(antenna_array.shape) == 3:
                                         antenna_array = antenna_array[:, :, 0] if antenna_array.shape[2] == 1 else antenna_array.mean(axis=2)
 
-                                    # Añadir dimensión de canal
+                                    # Añadir dimensión de canal (sin cambios)
                                     struct_array = np.expand_dims(struct_array, axis=-1)
                                     pixels_array = np.expand_dims(pixels_array, axis=-1)
                                     antenna_array = np.expand_dims(antenna_array, axis=-1)
 
-                                    # Combinar en tensor de entrada (ORDEN CORRECTO: struct, pixels, antenna)
+                                    # Combinar en tensor de entrada (sin cambios)
                                     input_image = np.concatenate([struct_array, pixels_array, antenna_array], axis=-1)
                                     input_batch = np.expand_dims(input_image, axis=0)
 
-                                    # Ejecutar predicción
+                                    # Ejecutar predicción (sin cambios)
                                     prediction_norm = modelo.predict(input_batch)[0]
 
-                                    # Manejar dimensiones de salida
+                                    # Manejar dimensiones de salida (sin cambios)
                                     if len(prediction_norm.shape) > 2:
                                         prediction_norm = prediction_norm[:, :, 0]
 
-                                    # Desnormalizar CORRECTAMENTE
+                                    # Desnormalizar CORRECTAMENTE (sin cambios)
                                     prediction_denorm = prediction_norm * (POWER_MAX - POWER_MIN) + POWER_MIN
 
-                                    # Convertir a numpy
+                                    # Convertir a numpy (sin cambios)
                                     pred_np = prediction_denorm.numpy() if hasattr(prediction_denorm, 'numpy') else np.array(prediction_denorm)
 
-                                    st.success("¡Predicción completada!")
+                                    # CAMBIO: Traducir success message
+                                    st.success(t("prediction_completed"))
 
-                                    # Calcular métricas usando los puntos de medición
+                                    # Calcular métricas usando los puntos de medición (sin cambios hasta...)
                                     pixel_array = np.array(st.session_state.uploaded_mediciones)
                                     measurement_coords = np.where(pixel_array > 0)
 
                                     if len(measurement_coords[0]) > 0:
-                                        # Extraer valores reales de las mediciones
+                                        # Extraer valores reales de las mediciones (sin cambios)
                                         measured_values = []
                                         predicted_values = []
                                         
@@ -2258,42 +2426,44 @@ def main():
                                             measured_values.append(real_value)
                                             predicted_values.append(pred_value)
                                         
-                                        # Convertir a arrays de NumPy
+                                        # Convertir a arrays de NumPy (sin cambios)
                                         measured_values = np.array(measured_values)
                                         predicted_values = np.array(predicted_values)
                                         
-                                        # Calcular métricas
+                                        # Calcular métricas (sin cambios)
                                         errors = predicted_values - measured_values
                                         mae = np.mean(np.abs(errors))
                                         rmse = np.sqrt(np.mean(errors**2))
                                         max_error = np.max(np.abs(errors))
                                         avg_error = np.mean(errors)
                                         
-                                        # Mostrar métricas
-                                        st.subheader("Métricas de evaluación")
+                                        # CAMBIO: Traducir subheader
+                                        st.subheader(t("evaluation_metrics"))
                                         col1, col2, col3, col4 = st.columns(4)
                                         with col1:
                                             st.metric("MAE", f"{mae:.2f} dB")
                                         with col2:
                                             st.metric("RMSE", f"{rmse:.2f} dB")
                                         with col3:
-                                            st.metric("Error máximo", f"{max_error:.2f} dB")
+                                            st.metric(t("max_error"), f"{max_error:.2f} dB")
                                     else:
-                                        st.warning("No se encontraron puntos de medición para calcular métricas")    
+                                        # CAMBIO: Traducir warning
+                                        st.warning(t("no_measurement_points"))
+
                                 
                                 # Mostrar métricas básicas de la predicción
-                                st.subheader("Métricas de la predicción")
+                                st.subheader(t("prediction_metrics"))
                                 metrics_col1, metrics_col2 = st.columns(2)
                                 with metrics_col1:
-                                    st.metric("Potencia máxima", f"{np.max(pred_np):.2f} dBm")
+                                    st.metric(t("max_power"), f"{np.max(pred_np):.2f} dBm")
                                 with metrics_col2:
-                                    st.metric("Potencia mínima", f"{np.min(pred_np):.2f} dBm")
- 
-                                # Visualización de las capas de entrada
-                                st.write("### Capas de entrada")
+                                    st.metric(t("min_power"), f"{np.min(pred_np):.2f} dBm")
+            
+                                # CAMBIO: Traducir título de visualización
+                                st.write(f"### {t('input_layers')}")
                                 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
 
-                                # Obtener las capas de entrada para visualización
+                                # Obtener las capas de entrada para visualización (sin cambios)
                                 if enable_calibration and calibration_result['success']:
                                     # Usar las capas del proceso de calibración
                                     layer1 = (input_image[:, :, 0] * STRUCT_MAX)
@@ -2318,89 +2488,86 @@ def main():
                                     layer2 = pixel_array_viz * (POWER_MAX - POWER_MIN) + POWER_MIN
                                     layer3 = antenna_array_viz * ANTENNA_MAX
 
-                                # Configurar visualizaciones
+                                # CAMBIO: Traducir títulos de los subplots
                                 im1 = ax1.imshow(layer1, extent=[0, 50, 0, 50], cmap='viridis')
-                                ax1.set_title('Estructura', pad=20)
+                                ax1.set_title(t("layer_structures"), pad=20)
                                 plt.colorbar(im1, ax=ax1)
 
                                 im2 = ax2.imshow(layer2, extent=[0, 50, 0, 50], cmap='viridis')
-                                ax2.set_title('Mediciones', pad=20)
+                                ax2.set_title(t("layer_measurements"), pad=20)
                                 plt.colorbar(im2, ax=ax2)
 
                                 im3 = ax3.imshow(layer3, extent=[0, 50, 0, 50], cmap='viridis')
-                                ax3.set_title('Posición estación base', pad=20)
+                                ax3.set_title(t("layer_antenna"), pad=20)
                                 plt.colorbar(im3, ax=ax3)
 
+                                # CAMBIO: Traducir labels de ejes
                                 for ax in [ax1, ax2, ax3]:
                                     ax.grid(True, linestyle='--', alpha=0.3)
-                                    ax.set_xlabel('Distancia (m)')
-                                    ax.set_ylabel('Distancia (m)')
+                                    ax.set_xlabel(t("distance_m"))
+                                    ax.set_ylabel(t("distance_m"))
 
                                 plt.tight_layout()
                                 st.pyplot(fig)
                                 plt.close(fig)
                                 
-                                # Mostrar resultado
-                                st.subheader("Resultado de la predicción")
+                                # CAMBIO: Traducir subheader de resultado
+                                st.subheader(t("prediction_result"))
 
-                                # Calcular rango dinámico real de los datos
+                                # Calcular rango dinámico real de los datos (sin cambios hasta...)
                                 pred_min = np.min(pred_np)
                                 pred_max = np.max(pred_np)
 
-                                # Solo usar valores que no sean del fondo (mayor que POWER_MIN + umbral)
-                                threshold = POWER_MIN + 10  # Umbral para filtrar fondo
+                                # Solo usar valores que no sean del fondo (sin cambios)
+                                threshold = POWER_MIN + 10
                                 mask = pred_np > threshold
                                 valid_data = pred_np[mask]
 
-                                if len(valid_data) > 100:  # Si hay suficientes datos válidos
+                                if len(valid_data) > 100:
                                     data_min = np.min(valid_data)
                                     data_max = np.max(valid_data)
                                     
-                                    # Usar el rango de datos válidos con un pequeño margen
-                                    buffer_range = (data_max - data_min) * 0.05  # 5% de buffer
+                                    buffer_range = (data_max - data_min) * 0.05
                                     vmin_plot = max(data_min - buffer_range, POWER_MIN)
                                     vmax_plot = data_max + buffer_range
                                 else:
-                                    # Fallback: usar todo el rango de datos
                                     vmin_plot = pred_min
                                     vmax_plot = pred_max
 
-                                # Crear la visualización
+                                # CAMBIO: Traducir título del gráfico
                                 fig, ax = plt.subplots(figsize=(8, 7))
                                 im = ax.imshow(pred_np, extent=[0, 50, 0, 50], cmap='viridis',
                                             vmin=vmin_plot, vmax=vmax_plot)
 
-                                ax.set_title('Mapa de potencia predicho', pad=20)
+                                ax.set_title(t("predicted_power_map"), pad=20)
                                 cbar = plt.colorbar(im, ax=ax)
-                                cbar.set_label('Potencia (dBm)')
+                                cbar.set_label(t("power_dbm"))
                                 ax.grid(True, linestyle='--', alpha=0.3)
-                                ax.set_xlabel('Distancia (m)')
-                                ax.set_ylabel('Distancia (m)')
+                                ax.set_xlabel(t("distance_m"))
+                                ax.set_ylabel(t("distance_m"))
 
-                                # Mostrar información del rango
-                                st.info(f"Rango de visualización: {vmin_plot:.1f} a {vmax_plot:.1f} dBm")
+                                # CAMBIO: Traducir info del rango
+                                st.info(t("visualization_range", vmin=vmin_plot, vmax=vmax_plot))
 
                                 plt.tight_layout()
                                 
-                                # Guardar la figura para descargarla
+                                # Guardar la figura para descargarla (sin cambios)
                                 fig_result = fig
-                                 
-                                #st.pyplot(fig)
+                                
                                 st.pyplot(fig, use_container_width=False)
-                                                               
-                                # Preparar imagen para descargar
-                                # Convertir la figura del resultado a una imagen para descargar
+                                                            
+                                # Preparar imagen para descargar (sin cambios hasta...)
                                 buffer = io.BytesIO()
                                 fig_result.savefig(buffer, format='png', bbox_inches='tight', dpi=300)
                                 buffer.seek(0)
                                 
-                                # Generar nombre de archivo con timestamp
+                                # Generar nombre de archivo con timestamp (sin cambios)
                                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                                 filename = f"mapa_potencia_{timestamp}.png"
                                 
-                                # Botón de descarga
+                                # CAMBIO: Traducir botón de descarga
                                 st.download_button(
-                                    label="Descargar imagen de predicción",
+                                    label=t("download_prediction_image"),
                                     data=buffer,
                                     file_name=filename,
                                     mime="image/png",
@@ -2409,26 +2576,27 @@ def main():
                                 plt.close(fig)
                                 
                                 # Histograma de valores predichos
-                                st.subheader("Distribución de potencia predicha")
+                                st.subheader(t("power_distribution"))
                                 fig, ax = plt.subplots(figsize=(10, 6))
                                 
-                                # Crear máscara para ignorar valores de fondo (cercanos al mínimo)
+                                # Crear máscara para ignorar valores de fondo (sin cambios)
                                 mask_np = pred_np > (POWER_MIN + 1)
                                 prediction_masked = pred_np[mask_np]
                                 
-                                if len(prediction_masked) > 10:  # Solo si hay suficientes datos válidos
-                                    ax.hist(prediction_masked, bins=50, alpha=0.7, color='blue', label='Predicción')
-                                    ax.set_xlabel('Potencia (dBm)')
-                                    ax.set_ylabel('Frecuencia')
-                                    ax.set_title('Distribución de valores de potencia predichos')
+                                if len(prediction_masked) > 10:
+                                    ax.hist(prediction_masked, bins=50, alpha=0.7, color='blue', label=t("prediction"))
+                                    ax.set_xlabel(t("power_dbm"))
+                                    ax.set_ylabel(t("frequency"))
+                                    ax.set_title(t("predicted_power_distribution"))
                                     ax.legend()
                                     plt.tight_layout()
                                     st.pyplot(fig)
                                 else:
-                                    st.info("No hay suficientes datos válidos para generar un histograma")
+                                    # CAMBIO: Traducir info
+                                    st.info(t("insufficient_data_histogram"))
                                 plt.close(fig)
 
-                                # Botón de descarga para la imagen de distribución
+                                # Botón de descarga para la imagen de distribución (sin cambios hasta...)
                                 buffer_dist = io.BytesIO()
                                 fig.savefig(buffer_dist, format='png', bbox_inches='tight', dpi=300)
                                 buffer_dist.seek(0)
@@ -2436,34 +2604,35 @@ def main():
                                 timestamp_dist = datetime.now().strftime("%Y%m%d_%H%M%S")
                                 filename_dist = f"distribucion_potencia_{timestamp_dist}.png"
 
+                                # CAMBIO: Traducir botón de descarga
                                 st.download_button(
-                                    label="Descargar imagen de distribución",
+                                    label=t("download_distribution_image"),
                                     data=buffer_dist,
                                     file_name=filename_dist,
                                     mime="image/png",
                                     key="download_dist_button"
                                 )
 
-                                # Generar segmentación
-                                st.subheader("Segmentación por zonas de potencia")
+                                # CAMBIO: Traducir subheader de segmentación
+                                st.subheader(t("power_zone_segmentation"))
                                 try:
-                                    # Detectar posición de la antena usando la función exacta del primer código
+                                    # Detectar posición de la antena (sin cambios)
                                     if enable_calibration and calibration_result['success']:
                                         antenna_pos_px = find_antenna_position(input_image[:, :, 2])
                                     else:
                                         antenna_pos_px = find_antenna_position(antenna_array)
                                     
-                                    # Crear máscara de segmentación usando la función exacta
+                                    # Crear máscara de segmentación (sin cambios)
                                     pred_mask, pred_r1, pred_r2 = create_segmentation_mask(pred_np, antenna_pos_px)
                                     
-                                    # Crear visualización EXACTA
+                                    # Crear visualización EXACTA (sin cambios hasta el título)
                                     fig_seg, ax_seg = plt.subplots(figsize=(8, 7))
                                     ax_seg.imshow(pred_mask)
                                     
-                                    # Marcar la antena
+                                    # Marcar la antena (sin cambios)
                                     ax_seg.plot(antenna_pos_px[0], antenna_pos_px[1], 'w+', markersize=15, markeredgewidth=3)
                                     
-                                    # Círculos concéntricos con el mismo centro
+                                    # Círculos concéntricos (sin cambios)
                                     if pred_r1 > 0:
                                         circle1 = plt.Circle(antenna_pos_px, pred_r1, fill=False, color='white', linewidth=2, linestyle='-')
                                         ax_seg.add_artist(circle1)
@@ -2472,36 +2641,36 @@ def main():
                                         circle2 = plt.Circle(antenna_pos_px, pred_r2, fill=False, color='white', linewidth=2, linestyle='--')
                                         ax_seg.add_artist(circle2)
                                     
-                                    ax_seg.set_xlabel('Píxeles (X)')
-                                    ax_seg.set_ylabel('Píxeles (Y)')
+                                    # CAMBIO: Traducir labels de ejes y título
+                                    ax_seg.set_xlabel(t("pixels_x"))
+                                    ax_seg.set_ylabel(t("pixels_y"))
                                     ax_seg.grid(True, linestyle='--', alpha=0.3)
-                                    ax_seg.set_title('Segmentación por zonas de potencia', pad=20)
+                                    ax_seg.set_title(t("power_zone_segmentation"), pad=20)
                                     
-                                    # Agregar leyenda EXACTA
+                                    # CAMBIO: Traducir leyenda
                                     from matplotlib.patches import Patch
                                     legend_elements = [
-                                        Patch(facecolor='red', label='Zona de rabasamiento (> 19 dBm)'),
-                                        Patch(facecolor='yellow', label='Zona ocupacional (12-19 dBm)'),
-                                        Patch(facecolor='green', label='Zona de conformidad (< 12 dBm)')
+                                        Patch(facecolor='red', label=t("zone_red")),
+                                        Patch(facecolor='yellow', label=t("zone_yellow")),
+                                        Patch(facecolor='green', label=t("zone_green"))
                                     ]
                                     ax_seg.legend(handles=legend_elements, loc='upper right')
                                     
                                     plt.tight_layout()
                                     st.pyplot(fig_seg, use_container_width=False)
                                     
-                                    # Información EXACTA
+                                    # Información EXACTA (sin cambios de cálculo)
                                     antenna_x_meters = antenna_pos_px[1] * 50/256
                                     antenna_y_meters = (256 - antenna_pos_px[0]) * 50/256
                                     
-                                    st.info(f"""
-                                    **Información de segmentación:**
-                                    - Posición de antena: ({antenna_x_meters:.2f}, {antenna_y_meters:.2f}) metros
-                                    - Posición píxeles: ({antenna_pos_px[0]:.1f}, {antenna_pos_px[1]:.1f})
-                                    - Radio zona roja: {pred_r1 * 50/256:.2f} metros
-                                    - Radio zona amarilla: {pred_r2 * 50/256:.2f} metros
-                                    """)
+                                    # CAMBIO: Traducir info de segmentación
+                                    st.info(t("segmentation_info",
+                                            antenna_pos_m=f"({antenna_x_meters:.2f}, {antenna_y_meters:.2f})",
+                                            antenna_pos_px=f"({antenna_pos_px[0]:.1f}, {antenna_pos_px[1]:.1f})",
+                                            red_radius=f"{pred_r1 * 50/256:.2f}",
+                                            yellow_radius=f"{pred_r2 * 50/256:.2f}"))
                                     
-                                    # Botón de descarga
+                                    # Botón de descarga (sin cambios hasta...)
                                     buffer_seg = io.BytesIO()
                                     fig_seg.savefig(buffer_seg, format='png', bbox_inches='tight', dpi=300)
                                     buffer_seg.seek(0)
@@ -2509,8 +2678,9 @@ def main():
                                     timestamp_seg = datetime.now().strftime("%Y%m%d_%H%M%S")
                                     filename_seg = f"segmentacion_potencia_{timestamp_seg}.png"
                                     
+                                    # CAMBIO: Traducir botón de descarga
                                     st.download_button(
-                                        label="Descargar imagen de segmentación",
+                                        label=t("download_segmentation_image"),
                                         data=buffer_seg,
                                         file_name=filename_seg,
                                         mime="image/png",
@@ -2520,158 +2690,94 @@ def main():
                                     plt.close(fig_seg)
                                     
                                 except Exception as e:
-                                    st.error(f"Error generando segmentación: {str(e)}")
+                                    # CAMBIO: Traducir error
+                                    st.error(f"{t('segmentation_error')}: {str(e)}")
                                     st.exception(e)
                                                                 
                             else:
-                                st.error("No se pudo cargar el modelo seleccionado")
+                                # CAMBIO: Traducir error de carga
+                                st.error(t("model_load_error"))
                         except Exception as e:
-                            st.error(f"Error durante la evaluación: {str(e)}")
+                            # CAMBIO: Traducir error de evaluación
+                            st.error(f"{t('evaluation_error')}: {str(e)}")
                             st.exception(e)
+                        
+# REEMPLAZA la función main() completa dentro de scenarios con esto:
 
             def main():
-                #st.title("Editor de Imágenes para Análisis de Cobertura")
-                tab1, tab2, tab3, tab4 = st.tabs(["Estructuras", "Posición estación base", "Mediciones", "Evaluación"])
-                with tab1: 
+                # Inicializar el tab activo si no existe
+                if 'active_scenario_tab' not in st.session_state:
+                    st.session_state.active_scenario_tab = 0
+                
+                # CSS para ocultar cajas de botones SOLO en scenarios
+                st.markdown("""
+                <style>
+                /* Aplicar solo después de esta clase única */
+                div.scenario-tabs-section div[data-testid="stButton"] button {
+                    background-color: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                
+                div.scenario-tabs-section div[data-testid="stButton"] button:hover {
+                    background-color: transparent !important;
+                    border: none !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # Crear contenedor con clase única
+                st.markdown('<div class="scenario-tabs-section">', unsafe_allow_html=True)
+                
+                # Crear opciones de tabs
+                tab_options = [
+                    t("tab_structures"),
+                    t("tab_antenna"),
+                    t("tab_measurements"),
+                    t("tab_evaluation")
+                ]
+                
+                # Crear contenedor de tabs horizontal
+                cols = st.columns(len(tab_options))
+                
+                for idx, (col, title) in enumerate(zip(cols, tab_options)):
+                    with col:
+                        if st.session_state.active_scenario_tab == idx:
+                            # Mostrar como tab activo (naranja con línea debajo)
+                            st.markdown(f"""
+                            <div style="text-align: center; border-bottom: 3px solid #FF6B35; padding: 0.5rem 1rem;">
+                                <span style="color: #FF6B35; font-weight: 600; cursor: pointer;">{title}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            # Mostrar como tab inactivo
+                            if st.button(title, key=f"scenario_tab_{idx}", use_container_width=True):
+                                st.session_state.active_scenario_tab = idx
+                                st.rerun()
+                
+                # Línea separadora
+                st.markdown("""
+                <div style="border-bottom: 1px solid rgba(49, 51, 63, 0.2); margin-bottom: 1rem;"></div>
+                """, unsafe_allow_html=True)
+                
+                # Mostrar contenido según tab seleccionado
+                if st.session_state.active_scenario_tab == 0:
                     create_building_interface()
-                with tab2:
+                elif st.session_state.active_scenario_tab == 1:
                     create_point_interface()
-                with tab3:
+                elif st.session_state.active_scenario_tab == 2:
                     create_pixel_selector()
-                with tab4:
+                elif st.session_state.active_scenario_tab == 3:
                     add_model_evaluation_section()
+                
+                # Cerrar contenedor
+                st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Mostrar imágenes guardadas en la barra lateral
                 show_saved_images()
 
             if __name__ == "__main__":
-                main()  
-
-    elif vista_seleccionada == "Artículo y publicaciones":
-        crear_header_seccion(
-            titulo="Artículo y Publicaciones",
-            subtitulo="ZonaCEM AI - Documentación académica y referencias científicas",
-            icono="📄"
-        )
-        
-        st.markdown(""" 
-        Esta sección contiene los enlaces y referencias a las publicaciones científicas derivadas de esta investigación.
-        """)
-        
-        # Información del artículo principal
-        st.subheader("Artículo: Estimación de las Zonas de Exposición a Campos Electromagnéticos en Estaciones Base Celulares Usando Inteligencia Artificial")
-        
-        # Información básica del artículo
-        st.markdown("""
-
-            **Autores:** José Luis Mera Tulcán y Giovanni Javier Pantoja Mora
-            
-            **Institución:** Universidad de Nariño
-            
-            **DOI:** `10.5281/zenodo.17110951`
-            
-            **Resumen:** Se presenta una metodología que permite la estimación de mapas de potencia recibida en estaciones base celulares a partir de medidas dispersas empleando redes neuronales convolucionales.
-            
-            **Palabras clave:** Inteligencia artificial, deep learning, U-Net, predicción de potencia, estación base celular, campos electromagnéticos.
-            """)
-        
-        # Enlaces de acceso principales
-        st.subheader("📂 Enlaces de Acceso")   
-
-        # URLs actualizadas - Versión 5
-        ZENODO_RECORD_URL = "https://doi.org/10.5281/zenodo.17110951"
-        ZENODO_PDF_URL = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf"
-        ZENODO_PDF_PREVIEW_URL = "https://zenodo.org/records/17247692/preview/Art%C3%ADculo.pdf?include_deleted=0"
-        ZENODO_PDF_DOWNLOAD_URL = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf?download=1"
-        GITLAB_REPO_URL = "https://gitlab.com/tulcanjose0/zonacem-ai"
-
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1: 
-            st.markdown(f"""
-            <a href="{ZENODO_RECORD_URL}" target="_blank"> 
-                <button style="
-                    background-color: #0066cc;
-                    color: white;
-                    padding: 15px 20px;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    text-decoration: none;
-                    display: inline-block;
-                    margin: 5px 0;
-                    width: 100%;
-                    text-align: center;
-                ">
-                    🏛️ Zenodo<br>
-                    <small>(Repositorio)</small>
-                </button>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <a href="{ZENODO_PDF_DOWNLOAD_URL}" target="_blank">
-                <button style="
-                    background-color: #28a745;
-                    color: white;
-                    padding: 15px 20px;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    text-decoration: none;
-                    display: inline-block;
-                    margin: 5px 0;
-                    width: 100%;
-                    text-align: center;
-                ">
-                    💾 Descargar<br>
-                    <small>(10.5 MB)</small>
-                </button>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <a href="{GITLAB_REPO_URL}" target="_blank">
-                <button style="
-                    background-color: #fc6d26;
-                    color: white;
-                    padding: 15px 20px;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    text-decoration: none;
-                    display: inline-block;
-                    margin: 5px 0;
-                    width: 100%;
-                    text-align: center;
-                ">
-                    💻 Código<br>
-                    <small>(GitLab)</small>
-                </button>
-            </a>
-            """, unsafe_allow_html=True)
-
-        # Vista previa del PDF usando Google Docs Viewer
-        st.subheader("📖 Vista Previa del Artículo")
-        
-        pdf_url = "https://zenodo.org/records/17247692/files/Art%C3%ADculo.pdf"
-        google_viewer_url = f"https://docs.google.com/gview?url={pdf_url}&embedded=true"
-        
-        st.markdown(f"""
-        <iframe src="{google_viewer_url}" 
-                width="100%" 
-                height="800" 
-                style="border: 1px solid #ddd; border-radius: 10px;">
-            <p>No se pudo cargar el visualizador. 
-            <a href="{pdf_url}" target="_blank">Haz clic aquí para abrir el PDF</a>
-            </p>
-        </iframe>
-        """, unsafe_allow_html=True)
+                main()
 
 if __name__ == "__main__":
     import time
