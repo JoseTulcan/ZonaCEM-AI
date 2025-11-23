@@ -965,7 +965,7 @@ def download_from_gitlab(url, filename):
         st.error(f"Error en descarga: {str(e)}")
         return None
 
-def main():
+def main(): 
     st.set_page_config(page_title="ZonaCEM AI", page_icon="📡", layout="wide")
     st.title("ZonaCEM AI")
 
