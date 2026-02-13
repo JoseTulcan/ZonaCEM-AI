@@ -2624,29 +2624,32 @@ def main():
                                     
                                     # Crear máscara de segmentación (sin cambios)
                                     pred_mask, pred_r1, pred_r2 = create_segmentation_mask(pred_np, antenna_pos_px)
-                                    
+
                                     # Crear visualización EXACTA (sin cambios hasta el título)
                                     fig_seg, ax_seg = plt.subplots(figsize=(8, 7))
                                     ax_seg.imshow(pred_mask)
-                                    
+
                                     # Marcar la antena (sin cambios)
                                     ax_seg.plot(antenna_pos_px[0], antenna_pos_px[1], 'w+', markersize=15, markeredgewidth=3)
-                                    
+
                                     # Círculos concéntricos (sin cambios)
                                     if pred_r1 > 0:
                                         circle1 = plt.Circle(antenna_pos_px, pred_r1, fill=False, color='white', linewidth=2, linestyle='-')
                                         ax_seg.add_artist(circle1)
-                                    
+
                                     if pred_r2 > pred_r1:
                                         circle2 = plt.Circle(antenna_pos_px, pred_r2, fill=False, color='white', linewidth=2, linestyle='--')
                                         ax_seg.add_artist(circle2)
-                                    
+
                                     # CAMBIO: Traducir labels de ejes y título
                                     ax_seg.set_xlabel(t("pixels_x"))
                                     ax_seg.set_ylabel(t("pixels_y"))
+                                    # Establecer ticks del eje Y para que coincidan con eje X (0, 50, 100, 150, 200, 250)
+                                    ax_seg.set_yticks([256, 206, 156, 106, 56, 6])
+                                    ax_seg.set_yticklabels(['0', '50', '100', '150', '200', '250'])
                                     ax_seg.grid(True, linestyle='--', alpha=0.3)
                                     ax_seg.set_title(t("power_zone_segmentation"), pad=20)
-                                    
+            
                                     # CAMBIO: Traducir leyenda
                                     from matplotlib.patches import Patch
                                     legend_elements = [
@@ -2659,17 +2662,25 @@ def main():
                                     plt.tight_layout()
                                     st.pyplot(fig_seg, use_container_width=False)
                                     
-                                    # Información EXACTA (sin cambios de cálculo)
-                                    antenna_x_meters = antenna_pos_px[1] * 50/256
-                                    antenna_y_meters = (256 - antenna_pos_px[0]) * 50/256
-                                    
+                                    # Calcular posición tomando como origen la esquina INFERIOR IZQUIERDA
+                                    # En la gráfica: eje X horizontal (columnas), eje Y vertical (filas)
+                                    # antenna_pos_px[0] = fila (coordenada Y en sistema original desde arriba)
+                                    # antenna_pos_px[1] = columna (coordenada X)
+                                    # Para mostrar con origen inferior izquierda:
+                                    antenna_x_pixels = antenna_pos_px[0]  # Esto es lo que se ve en el eje X de la gráfica
+                                    antenna_y_pixels = 256 - antenna_pos_px[1]  # Invertir para origen inferior
+
+                                    # Convertir a metros
+                                    antenna_x_meters = antenna_x_pixels * 50/256
+                                    antenna_y_meters = antenna_y_pixels * 50/256
+
                                     # CAMBIO: Traducir info de segmentación
                                     st.info(t("segmentation_info",
                                             antenna_pos_m=f"({antenna_x_meters:.2f}, {antenna_y_meters:.2f})",
-                                            antenna_pos_px=f"({antenna_pos_px[0]:.1f}, {antenna_pos_px[1]:.1f})",
+                                            antenna_pos_px=f"({antenna_x_pixels:.1f}, {antenna_y_pixels:.1f})",
                                             red_radius=f"{pred_r1 * 50/256:.2f}",
                                             yellow_radius=f"{pred_r2 * 50/256:.2f}"))
-                                    
+
                                     # Botón de descarga (sin cambios hasta...)
                                     buffer_seg = io.BytesIO()
                                     fig_seg.savefig(buffer_seg, format='png', bbox_inches='tight', dpi=300)
@@ -2702,7 +2713,7 @@ def main():
                             st.error(f"{t('evaluation_error')}: {str(e)}")
                             st.exception(e)
                         
-# REEMPLAZA la función main() completa dentro de scenarios con esto:
+            # REEMPLAZA la función main() completa dentro de scenarios con esto:
 
             def main():
                 # Inicializar el tab activo si no existe

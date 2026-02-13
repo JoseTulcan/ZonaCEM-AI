@@ -167,11 +167,19 @@ TRANSLATIONS = {
         "red_zone": "Zona de rebasamiento (> 19 dBm)",
         "yellow_zone": "Zona ocupacional (12-19 dBm)",
         "green_zone": "Zona de conformidad (< 12 dBm)",
+
+        # "segmentation_info": """**Información de segmentación:**
+        # - Posición de antena: ({x:.2f}, {y:.2f}) metros
+        # - Posición píxeles: ({px:.1f}, {py:.1f})
+        # - Radio zona roja: {r1:.2f} metros
+        # - Radio zona amarilla: {r2:.2f} metros""",
+
         "segmentation_info": """**Información de segmentación:**
-        - Posición de antena: ({x:.2f}, {y:.2f}) metros
-        - Posición píxeles: ({px:.1f}, {py:.1f})
-        - Radio zona roja: {r1:.2f} metros
-        - Radio zona amarilla: {r2:.2f} metros""",
+        - Posición de antena: {antenna_pos_m} metros
+        - Posición en píxeles: {antenna_pos_px}
+        - Radio zona roja: {red_radius} metros
+        - Radio zona amarilla: {yellow_radius} metros""",
+
         "download_segmentation": "Descargar imagen de segmentación",
         "model_load_error": "No se pudo cargar el modelo seleccionado",
         "evaluation_error": "Error durante la evaluación: {error}",
@@ -613,11 +621,19 @@ TRANSLATIONS = {
         "red_zone": "Excess zone (> 19 dBm)",
         "yellow_zone": "Occupational zone (12-19 dBm)",
         "green_zone": "Compliance zone (< 12 dBm)",
+
+        # "segmentation_info": """**Segmentation information:**
+        # - Antenna position: ({x:.2f}, {y:.2f}) meters
+        # - Pixel position: ({px:.1f}, {py:.1f})
+        # - Red zone radius: {r1:.2f} meters
+        # - Yellow zone radius: {r2:.2f} meters""",
+
         "segmentation_info": """**Segmentation information:**
-        - Antenna position: ({x:.2f}, {y:.2f}) meters
-        - Pixel position: ({px:.1f}, {py:.1f})
-        - Red zone radius: {r1:.2f} meters
-        - Yellow zone radius: {r2:.2f} meters""",
+        - Antenna position: {antenna_pos_m} meters
+        - Pixel position: {antenna_pos_px}
+        - Red zone radius: {red_radius} meters
+        - Yellow zone radius: {yellow_radius} meters""",
+
         "download_segmentation": "Download segmentation image",
         "model_load_error": "Could not load selected model",
         "evaluation_error": "Error during evaluation: {error}",
