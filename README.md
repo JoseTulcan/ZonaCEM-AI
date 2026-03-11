@@ -40,7 +40,6 @@ En esta investigación se propone una metodología de estimación de mapas de en
 ## Autores
 **José Luis Mera Tulcán**
  
-**Giovanni Javier Pantoja Mora**
 
 
 
