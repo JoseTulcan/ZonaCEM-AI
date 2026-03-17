@@ -1,13 +1,10 @@
 # ZonaCEM AI: Estimación de las Zonas de Exposición a Campos Electromagnéticos en Estaciones Base Celulares Usando Inteligencia Artificial
 
 ## Conjuntos de datos y modelos entrenados disponibles en: 
-https://gitlab.com/tulcanjose0/zonacem-ai/-/tree/e95ebba44fefaf4bce6609ad0a3c70d4c37cac2f/
-
-## Artículo disponible en:
-https://doi.org/10.5281/zenodo.17110951
+[Repositorio](https://doi.org/10.5281/zenodo.17676196)
 
 ## Aplicación disponible en:
-[ZonaCEM AI](https://zonacem-ai-app.streamlit.app/)   
+[ZonaCEM AI]([https://zonacem-ai-app.streamlit.app/](https://zonacem-ai.streamlit.app/))   
 
 Esta app permite estimar la potencia recibida en estaciones base celulares en escenarios urbanos, mediante tres modelos basados en la arquitectura U-Net.
 
