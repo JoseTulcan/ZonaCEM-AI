@@ -34,9 +34,7 @@ En esta investigación se propone una metodología de estimación de mapas de en
 - Medidas dispersas correspondientes al 0.045 % de las mediciones, las cuales son tomadas en un escenario real y constituyen las métricas que se usan para evaluar la efectividad de los modelos creados. 
 - ZonaCEM AI, una aplicación que permite la creación y evaluación de nuevos escenarios con cada uno de los modelos
 
-## Autores
-**José Luis Mera Tulcán**
- 
+
 
 
 
