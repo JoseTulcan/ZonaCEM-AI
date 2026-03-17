@@ -4,7 +4,7 @@
 [Repositorio](https://doi.org/10.5281/zenodo.17676196)
 
 ## Aplicación disponible en:
-[ZonaCEM AI]([https://zonacem-ai-app.streamlit.app/](https://zonacem-ai.streamlit.app/))   
+[ZonaCEM AI](https://zonacem-ai.streamlit.app/)   
 
 Esta app permite estimar la potencia recibida en estaciones base celulares en escenarios urbanos, mediante tres modelos basados en la arquitectura U-Net.
 
